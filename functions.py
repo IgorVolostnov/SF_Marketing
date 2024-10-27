@@ -145,7 +145,7 @@ class Function:
         else:
             if message.from_user.id not in self.dict_user.keys():
                 await self.execute.set_default_category(message.from_user.id)
-                self.dict_user[message.from_user.id] = {'history': ['start'], 'messages': [],
+                self.dict_user[message.from_user.id] = {'history': ['start'], 'messages': [str(message.message_id)],
                                                         'first_name': message.from_user.first_name,
                                                         'last_name': message.from_user.last_name,
                                                         'user_name': message.from_user.username}
@@ -1454,7 +1454,8 @@ class Function:
             await self.bot.edit_head_caption(text, call_back.message.chat.id,
                                              self.dict_user[call_back.from_user.id]['messages'][-1],
                                              self.build_keyboard(first_keyboard, 1))
-            await self.dispatcher.scheduler.add_new_reminder(row_id, self.dict_goal[row_id])
+            if weekday != 'Не напоминать о цели':
+                await self.dispatcher.scheduler.add_new_reminder(row_id, self.dict_goal[row_id])
         else:
             keyboard_time = await self.keyboard.get_time_reminder()
             button_done = {'done_reminder_time': 'Готово ✅'}
@@ -1576,10 +1577,13 @@ class Function:
             text = f"{self.format_text(text_in_message)}\n " \
                    f"Дата расходов: {self.format_text(data_time)}\n " \
                    f"Сумма расходов: {self.format_text(str(amount))} ₽"
-            await self.bot.edit_head_caption(text, call_back.message.chat.id,
-                                             self.dict_user[call_back.from_user.id]['messages'][-1],
-                                             self.build_keyboard(keyboard_calculater, 3, button_done))
-            self.dict_user[call_back.from_user.id]['history'].append('add_sum_outlay')
+            try:
+                await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                                 self.dict_user[call_back.from_user.id]['messages'][-1],
+                                                 self.build_keyboard(keyboard_calculater, 3, button_done))
+                self.dict_user[call_back.from_user.id]['history'].append('add_sum_outlay')
+            except TelegramBadRequest:
+                self.dict_user[call_back.from_user.id]['history'].append('add_sum_outlay')
         else:
             keyboard_outlay = await self.keyboard.get_outlay_menu()
             text = f"{self.format_text('Добавить новые расходы ➕')} - добавьте новые расходы\n" \
@@ -2377,6 +2381,12 @@ class Function:
                                                        f"за {str(int(dict_info_goal['duration']))} месяцев, "
                                                        f"будет очень сложно")
             return False
+        if int(dict_info_goal['duration']) > 2400:
+            await self.bot.alert_message(call_back.id, f"Мы желаем Вам долгих лет жизни, но у нас действует "
+                                                       f"ограничение по сроку достижения цели в 2400 месяцев - "
+                                                       f"200 лет! "
+                                                       f"Поэтому срок {str(int(dict_info_goal['duration']))} месяцев, "
+                                                       f"не подходит")
         else:
             return True
 
@@ -2569,7 +2579,7 @@ class Function:
 
     async def delete_messages(self, user_id: int, list_messages: list, except_id: str = None,
                               individual: bool = False) -> list:
-        if not list_messages:
+        if len(list_messages) == 0:
             new_list_message = []
         elif except_id and individual:
             new_list_message = []

@@ -224,8 +224,10 @@ class GetTextOCR:
         pdf_file_obj.close()
 
         # Удаляем созданные дополнительные файлы
-        os.remove('cropped_image.pdf')
-        os.remove('PDF_image.png')
+        if os.path.exists('cropped_image.pdf'):
+            os.remove('cropped_image.pdf')
+        if os.path.exists('PDF_image.png'):
+            os.remove('PDF_image.png')
         # Удаляем содержимое страницы
         return text_per_page['Page_0'][self.kind_content]
 

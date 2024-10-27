@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import aiosqlite
@@ -899,7 +900,7 @@ class Execute:
                                           f"FROM OUTLAY " \
                                           f"INNER JOIN CATEGORY_OUTLAY " \
                                           f"ON OUTLAY.CATEGORY_OUT = CATEGORY_OUTLAY.ROWID " \
-                                          f"AND OUTLAY.USER_ID = '{user_id}' " \
+                                          f"AND OUTLAY.USER_ID = '{user_id}' AND STATUS_OUTLAY = 'current' " \
                                           f"GROUP BY CATEGORY_OUT"
             await cursor.execute(sql_get_data_diagram_outlay)
             row_table = await cursor.fetchall()
@@ -924,7 +925,7 @@ class Execute:
                                           f"FROM INCOME " \
                                           f"INNER JOIN CATEGORY_INCOME " \
                                           f"ON INCOME.CATEGORY_IN = CATEGORY_INCOME.ROWID " \
-                                          f"AND INCOME.USER_ID = '{user_id}' " \
+                                          f"AND INCOME.USER_ID = '{user_id}' AND STATUS_INCOME = 'current' " \
                                           f"GROUP BY CATEGORY_IN"
             await cursor.execute(sql_get_data_diagram_income)
             row_table = await cursor.fetchall()
@@ -942,7 +943,11 @@ class Execute:
 
     @staticmethod
     async def get_list(string: str) -> list:
-        return string.split('///')
+        if string == '':
+            list_info = []
+        else:
+            list_info = string.split('///')
+        return list_info
 
     @staticmethod
     async def get_str(list_item: list) -> str:
@@ -1034,3 +1039,12 @@ class Execute:
                 i += 1
         assembling_dict_income['Доходы Стр.' + str(y)] = dict_goal
         return assembling_dict_income
+
+
+# base = Execute()
+# messages = asyncio.run(base.get_list(''))
+# print(messages)
+# asyncio.run(base.show_users())
+# info_user = asyncio.run(base.get_user(931285583))
+# for key, info in info_user.items():
+#     print(f'{key}: {info}')
