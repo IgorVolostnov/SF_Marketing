@@ -29,7 +29,7 @@ class Function:
         self.page_income = self.keyboard.get_pages_income
         self.execute = Execute()
         self.info_pdf = GetTextOCR()
-        self.ai = AI(os.environ["TOKEN_SBER"])
+        self.ai = AI()
         self.diagram = UserCosts()
         self.dict_user = asyncio.run(self.execute.get_dict_user)
         self.dict_goal = asyncio.run(self.execute.get_dict_goal)
@@ -42,7 +42,7 @@ class Function:
             if self.dict_user[call_back.from_user.id]['history'][-1] == 'start':
                 await self.return_start(call_back)
             elif self.dict_user[call_back.from_user.id]['history'][-1] == 'ai':
-                await self.show_virtual_assistant(call_back, previous_history)
+                await self.show_chat(call_back, previous_history)
             elif self.dict_user[call_back.from_user.id]['history'][-1] == 'goal':
                 await self.show_add_goal(call_back, previous_history)
             elif self.dict_user[call_back.from_user.id]['history'][-1] == 'outlay':
@@ -100,32 +100,80 @@ class Function:
             this_bot = False
         return this_bot
 
-    async def show_virtual_assistant(self, call_back: CallbackQuery, back_history: str = None):
+    async def show_virtual_assistant(self, call_back: CallbackQuery):
+        menu_ai = {'chat': 'Чат с помощником 🗣', 'create_image': 'Создание изображений 🌆', 'back': 'Назад 🔙'}
+        text = f'Выберите {self.format_text("Чат")}, если хотите пообщаться с виртуальным помощником или ' \
+               f'{self.format_text("Создание изображений")}, если хотите, чтобы виртуальный помощник создавал ' \
+               f'изображения в ответ на Ваши запросы'
+        answer = await self.bot.send_message_news(call_back.message.chat.id, self.build_keyboard(menu_ai, 2), text)
+        self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
+            call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
+        self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
+        self.dict_user[call_back.from_user.id]['history'].append('ai')
+        await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        return True
+
+    async def show_chat(self, call_back: CallbackQuery, back_history: str = None):
         if back_history is None:
-            back_ai = {'back': 'Выйти из виртуального ассистента 🚪'}
-            text = 'Привет! Я ваш виртуальный ассистент, чем могу помочь?'
-            answer = await self.bot.send_message_news(call_back.message.chat.id, self.build_keyboard(back_ai, 1), text)
-            self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
-                call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
-            self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
-            self.dict_user[call_back.from_user.id]['history'].append('ai')
+            back_ai = {'back': 'Выйти из чата 🚪'}
+            text = f'Привет! Я Ваш {self.format_text("виртуальный ассистент")}, чем могу помочь?'
+            try:
+                await self.edit_message(call_back.message, text, self.build_keyboard(back_ai, 1))
+                self.dict_user[call_back.from_user.id]['history'].append('chat_ai')
+            except TelegramBadRequest:
+                self.dict_user[call_back.from_user.id]['history'].append('chat_ai')
         else:
-            first_keyboard = await self.keyboard.get_first_menu(self.dict_user[call_back.from_user.id]['history'])
-            text = f"{self.format_text('Поставить цель 🎯')} - выбрать цель, на которую будем копить!\n" \
-                   f"{self.format_text('Расходы 🧮')} - меню учета расходов\n" \
-                   f"{self.format_text('Доходы 💰')} - меню учета доходов\n"
-            answer = await self.bot.push_photo(call_back.message.chat.id, text,
-                                               self.build_keyboard(first_keyboard, 1), self.bot.logo_main_menu)
+            menu_ai = {'chat': 'Чат с помощником 🗣', 'create_image': 'Создание изображений 🌆', 'back': 'Назад 🔙'}
+            text = f'Выберите {self.format_text("Чат")}, если хотите пообщаться с виртуальным помощником или ' \
+                   f'{self.format_text("Создание изображений")}, если хотите, чтобы виртуальный помощник создавал ' \
+                   f'изображения в ответ на Ваши запросы'
+            answer = await self.bot.send_message_news(call_back.message.chat.id, self.build_keyboard(menu_ai, 2),
+                                                      text)
             self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
                 call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
             self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
         await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
         return True
 
-    async def answer_ai(self, message: Message):
-        answer_ai = await self.ai.talk_ai(message.text)
-        back_ai = {'back': 'Выйти из виртуального ассистента 🚪'}
+    async def answer_chat_ai(self, message: Message):
+        answer_ai = await self.ai.answer_ai_message(message.text)
+        back_ai = {'back': 'Выйти из чата 🚪'}
         answer = await self.answer_message(message, answer_ai, self.build_keyboard(back_ai, 1))
+        self.dict_user[message.from_user.id]['messages'].append(str(message.message_id))
+        self.dict_user[message.from_user.id]['messages'].append(str(answer.message_id))
+        await self.execute.update_user(message.from_user.id, self.dict_user[message.from_user.id])
+        return True
+
+    async def show_create_image(self, call_back: CallbackQuery, back_history: str = None):
+        if back_history is None:
+            back_ai = {'back': 'Выйти из создания изображений 🚪'}
+            text = f'Привет! Я Ваш {self.format_text("виртуальный ассистент")}, отправьте мне сообщение с текстом, ' \
+                   f'что нужно нарисовать, например, <code>Нарисуй розового кота с короной на голове</code>'
+            try:
+                await self.edit_message(call_back.message, text, self.build_keyboard(back_ai, 1))
+                self.dict_user[call_back.from_user.id]['history'].append('create_image_ai')
+            except TelegramBadRequest:
+                self.dict_user[call_back.from_user.id]['history'].append('create_image_ai')
+        else:
+            menu_ai = {'chat': 'Чат с помощником 🗣', 'create_image': 'Создание изображений 🌆', 'back': 'Назад 🔙'}
+            text = f'Выберите {self.format_text("Чат")}, если хотите пообщаться с виртуальным помощником или ' \
+                   f'{self.format_text("Создание изображений")}, если хотите, чтобы виртуальный помощник создавал ' \
+                   f'изображения в ответ на Ваши запросы'
+            answer = await self.bot.send_message_news(call_back.message.chat.id, self.build_keyboard(menu_ai, 2),
+                                                      text)
+            self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
+                call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
+            self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
+        await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        return True
+
+    async def answer_create_image_ai(self, message: Message):
+        image_ai = await self.ai.answer_ai_image(message.text)
+        back_ai = {'back': 'Выйти из создания изображений 🚪'}
+        fs_input_file = FSInputFile("images/new_img.png")
+        text = f"{image_ai}"
+        answer = await self.bot.push_photo(message.chat.id, self.format_text(text),
+                                           self.build_keyboard(back_ai, 1), fs_input_file)
         self.dict_user[message.from_user.id]['messages'].append(str(message.message_id))
         self.dict_user[message.from_user.id]['messages'].append(str(answer.message_id))
         await self.execute.update_user(message.from_user.id, self.dict_user[message.from_user.id])

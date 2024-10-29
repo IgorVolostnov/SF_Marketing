@@ -65,7 +65,7 @@ class BotMessage(Bot):
         return await self.edit_message_reply_markup(chat_id=chat_message, message_id=id_message, reply_markup=keyboard)
 
     async def send_message_news(self, chat_id: int, keyboard: InlineKeyboardMarkup, text_message: str):
-        return await self.send_message(chat_id=chat_id, text=self.format_text(text_message),
+        return await self.send_message(chat_id=chat_id, text=text_message,
                                        parse_mode=ParseMode.HTML, reply_markup=keyboard)
 
     async def push_photo(self, message_chat_id: int, text: str, keyboard: InlineKeyboardMarkup,
@@ -202,9 +202,13 @@ class DispatcherMessage(Dispatcher):
                     task = asyncio.create_task(self.functions.show_add_category_in(message))
                     task.set_name(f'{message.from_user.id}_task_add_category_in')
                     await self.queues_message.start(task)
-                elif 'ai' in self.dict_user[message.from_user.id]['history'][-1]:
-                    task = asyncio.create_task(self.functions.answer_ai(message))
-                    task.set_name(f'{message.from_user.id}_task_answer_ai')
+                elif 'chat_ai' in self.dict_user[message.from_user.id]['history'][-1]:
+                    task = asyncio.create_task(self.functions.answer_chat_ai(message))
+                    task.set_name(f'{message.from_user.id}_task_answer_chat_ai')
+                    await self.queues_message.start(task)
+                elif 'create_image_ai' in self.dict_user[message.from_user.id]['history'][-1]:
+                    task = asyncio.create_task(self.functions.answer_create_image_ai(message))
+                    task.set_name(f'{message.from_user.id}_task_answer_create_image_ai')
                     await self.queues_message.start(task)
                 else:
                     print(message.text)
@@ -466,6 +470,18 @@ class DispatcherMessage(Dispatcher):
         async def send_virtual_assistant_message(callback: CallbackQuery):
             task = asyncio.create_task(self.functions.show_virtual_assistant(callback))
             task.set_name(f'{callback.from_user.id}_task_show_virtual_assistant')
+            await self.queues_message.start(task)
+
+        @self.callback_query(F.from_user.id.in_(self.dict_user) & (F.data == 'chat'))
+        async def send_chat_message(callback: CallbackQuery):
+            task = asyncio.create_task(self.functions.show_chat(callback))
+            task.set_name(f'{callback.from_user.id}_task_show_chat')
+            await self.queues_message.start(task)
+
+        @self.callback_query(F.from_user.id.in_(self.dict_user) & (F.data == 'create_image'))
+        async def send_create_image_message(callback: CallbackQuery):
+            task = asyncio.create_task(self.functions.show_create_image(callback))
+            task.set_name(f'{callback.from_user.id}_task_show_create_image')
             await self.queues_message.start(task)
 
         @self.callback_query(F.from_user.id.in_(self.dict_user) & (F.data == 'analytic_outlay'))

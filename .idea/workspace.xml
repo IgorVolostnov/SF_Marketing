@@ -4,12 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a3a2aafe-6649-4c1c-9280-caeaad535ee9" name="Changes" comment="Final commit">
+    <list default="true" id="a3a2aafe-6649-4c1c-9280-caeaad535ee9" name="Changes" comment="Error correction 202410271255">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/database_requests.py" beforeDir="false" afterPath="$PROJECT_DIR$/database_requests.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/edit_pdf.py" beforeDir="false" afterPath="$PROJECT_DIR$/edit_pdf.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dispatcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/dispatcher.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plot_data.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,7 +59,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "git-widget-placeholder": "master",
     "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/Python 3.11/Мои проекты/TelegramBotRossvik",
+    "last_opened_file_path": "C:/Python 3.11/Мои проекты/UpDatePostgreSQL",
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
 }]]></component>
@@ -359,7 +359,14 @@
       <option name="project" value="LOCAL" />
       <updated>1729269643403</updated>
     </task>
-    <option name="localTasksCounter" value="24" />
+    <task id="LOCAL-00024" summary="Error correction 202410271255">
+      <created>1730022998511</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1730022998511</updated>
+    </task>
+    <option name="localTasksCounter" value="25" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -398,6 +405,7 @@
     <MESSAGE value="Commit 202410172311" />
     <MESSAGE value="Commit 202410181302" />
     <MESSAGE value="Final commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="Final commit" />
+    <MESSAGE value="Error correction 202410271255" />
+    <option name="LAST_COMMIT_MESSAGE" value="Error correction 202410271255" />
   </component>
 </project>
