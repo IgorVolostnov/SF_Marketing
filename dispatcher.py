@@ -104,9 +104,8 @@ class BotMessage(Bot):
         return filepath, caption
 
     async def save_photo(self, message: Message):
-        id_file = re.sub('[^0-9]', '', str(datetime.datetime.now()))
-        name_file = f"photo_{id_file}"
-        filepath = os.path.join(os.path.split(os.path.dirname(__file__))[0], f'data/content/{name_file}.jpg')
+        name_file = f"photo_example"
+        filepath = f'images/{name_file}.jpg'
         file_id = message.photo[-1].file_id
         caption = message.caption
         file = await self.get_file(file_id)
@@ -221,8 +220,12 @@ class DispatcherMessage(Dispatcher):
                     message, self.dict_user[message.from_user.id]['messages']))
                 await self.queues.start(message.from_user.id, task)
             elif message.content_type == "photo":
-                await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
-                print("photo")
+                if 'create_image_ai' in self.dict_user[message.from_user.id]['history'][-1]:
+                    task = asyncio.create_task(self.functions.answer_post_user_example(message))
+                    task.set_name(f'{message.from_user.id}_task_answer_post_user_example')
+                    await self.queues_message.start(task)
+                else:
+                    await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
             elif message.content_type == "sticker":
                 await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
                 print("sticker")

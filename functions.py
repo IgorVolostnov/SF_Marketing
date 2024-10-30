@@ -29,7 +29,7 @@ class Function:
         self.page_income = self.keyboard.get_pages_income
         self.execute = Execute()
         self.info_pdf = GetTextOCR()
-        self.ai = AI()
+        self.ai = AI(self)
         self.diagram = UserCosts()
         self.dict_user = asyncio.run(self.execute.get_dict_user)
         self.dict_goal = asyncio.run(self.execute.get_dict_goal)
@@ -105,7 +105,7 @@ class Function:
         text = f'Выберите {self.format_text("Чат")}, если хотите пообщаться с виртуальным помощником или ' \
                f'{self.format_text("Создание изображений")}, если хотите, чтобы виртуальный помощник создавал ' \
                f'изображения в ответ на Ваши запросы'
-        answer = await self.bot.send_message_news(call_back.message.chat.id, self.build_keyboard(menu_ai, 2), text)
+        answer = await self.bot.send_message_news(call_back.message.chat.id, self.build_keyboard(menu_ai, 1), text)
         self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
             call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
         self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
@@ -127,7 +127,7 @@ class Function:
             text = f'Выберите {self.format_text("Чат")}, если хотите пообщаться с виртуальным помощником или ' \
                    f'{self.format_text("Создание изображений")}, если хотите, чтобы виртуальный помощник создавал ' \
                    f'изображения в ответ на Ваши запросы'
-            answer = await self.bot.send_message_news(call_back.message.chat.id, self.build_keyboard(menu_ai, 2),
+            answer = await self.bot.send_message_news(call_back.message.chat.id, self.build_keyboard(menu_ai, 1),
                                                       text)
             self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
                 call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
@@ -159,7 +159,7 @@ class Function:
             text = f'Выберите {self.format_text("Чат")}, если хотите пообщаться с виртуальным помощником или ' \
                    f'{self.format_text("Создание изображений")}, если хотите, чтобы виртуальный помощник создавал ' \
                    f'изображения в ответ на Ваши запросы'
-            answer = await self.bot.send_message_news(call_back.message.chat.id, self.build_keyboard(menu_ai, 2),
+            answer = await self.bot.send_message_news(call_back.message.chat.id, self.build_keyboard(menu_ai, 1),
                                                       text)
             self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
                 call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
@@ -168,12 +168,24 @@ class Function:
         return True
 
     async def answer_create_image_ai(self, message: Message):
-        image_ai = await self.ai.answer_ai_image(message.text)
+        answer_ai, path_photo, progress_message = await self.ai.answer_ai_image(message.text, message)
+        await self.bot.delete_messages_chat(message.chat.id, [progress_message.message_id])
         back_ai = {'back': 'Выйти из создания изображений 🚪'}
-        fs_input_file = FSInputFile("images/new_img.png")
-        text = f"{image_ai}"
+        fs_input_file = FSInputFile(path_photo)
+        text = f"{answer_ai}"
         answer = await self.bot.push_photo(message.chat.id, self.format_text(text),
                                            self.build_keyboard(back_ai, 1), fs_input_file)
+        self.dict_user[message.from_user.id]['messages'].append(str(message.message_id))
+        self.dict_user[message.from_user.id]['messages'].append(str(answer.message_id))
+        await self.execute.update_user(message.from_user.id, self.dict_user[message.from_user.id])
+        return True
+
+    async def answer_post_user_example(self, message: Message):
+        photo_info = await self.bot.save_photo(message)
+        selling_text, progress_message = await self.ai.post_by_user_photo(photo_info[1], photo_info[0], message)
+        await self.bot.delete_messages_chat(message.chat.id, [progress_message.message_id])
+        back_ai = {'back': 'Выйти из создания изображений 🚪'}
+        answer = await self.answer_message(message, selling_text, self.build_keyboard(back_ai, 1))
         self.dict_user[message.from_user.id]['messages'].append(str(message.message_id))
         self.dict_user[message.from_user.id]['messages'].append(str(answer.message_id))
         await self.execute.update_user(message.from_user.id, self.dict_user[message.from_user.id])
@@ -2407,12 +2419,6 @@ class Function:
         await self.bot.delete_messages_chat(message.chat.id, arr_message[1:])
         return voice_info
 
-    async def get_photo(self, message: Message, list_messages: list):
-        photo_info = await self.bot.save_photo(message)
-        arr_message = self.add_message_user(list_messages, str(message.message_id))
-        await self.bot.delete_messages_chat(message.chat.id, arr_message[1:])
-        return photo_info
-
     async def get_video(self, message: Message, list_messages: list):
         video_info = await self.bot.save_video(message)
         arr_message = self.add_message_user(list_messages, str(message.message_id))
@@ -2565,6 +2571,10 @@ class Function:
     @staticmethod
     async def answer_text(message: Message, text: str):
         return await message.answer(text=text, parse_mode=ParseMode.HTML, reply_to_message_id=message.message_id)
+
+    @staticmethod
+    async def edit_text(message: Message, text: str):
+        return await message.edit_text(text=text, parse_mode=ParseMode.HTML)
 
     @staticmethod
     async def edit_caption(message: Message, text: str, keyboard: InlineKeyboardMarkup):
