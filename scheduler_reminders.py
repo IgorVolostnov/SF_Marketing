@@ -28,3 +28,6 @@ class Reminders(AsyncIOScheduler):
         self.add_job(self.functions.send_recommendation, 'cron', day_of_week='MON-SUN', hour=14, minute=10,
                      end_date='2025-12-31', args=[user_id, text_recommendation], id=f'news_{str(user_id)}',
                      jobstore='default')
+
+    async def delete_newsletter(self, user_id: int):
+        self.remove_job(f'news_{str(user_id)}', 'default')

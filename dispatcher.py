@@ -188,63 +188,70 @@ class DispatcherMessage(Dispatcher):
             "group_chat_created", "supergroup_chat_created", "channel_chat_created", "migrate_to_chat_id",
             "migrate_from_chat_id", "pinned_message"}))
         async def get_message(message: Message):
-            if message.content_type == "text":
-                if 'add_goal_name' in self.dict_user[message.from_user.id]['history'][-1]:
-                    task = asyncio.create_task(self.functions.show_add_name_goal(message))
-                    task.set_name(f'{message.from_user.id}_task_add_name_goal')
-                    await self.queues_message.start(task)
-                elif 'add_recipient_funds' in self.dict_user[message.from_user.id]['history'][-1]:
-                    task = asyncio.create_task(self.functions.show_add_category_out(message))
-                    task.set_name(f'{message.from_user.id}_task_add_category_out')
-                    await self.queues_message.start(task)
-                elif 'add_sender_funds' in self.dict_user[message.from_user.id]['history'][-1]:
-                    task = asyncio.create_task(self.functions.show_add_category_in(message))
-                    task.set_name(f'{message.from_user.id}_task_add_category_in')
-                    await self.queues_message.start(task)
-                elif 'chat_ai' in self.dict_user[message.from_user.id]['history'][-1]:
-                    task = asyncio.create_task(self.functions.answer_chat_ai(message))
-                    task.set_name(f'{message.from_user.id}_task_answer_chat_ai')
-                    await self.queues_message.start(task)
-                elif 'create_image_ai' in self.dict_user[message.from_user.id]['history'][-1]:
-                    task = asyncio.create_task(self.functions.answer_create_image_ai(message))
-                    task.set_name(f'{message.from_user.id}_task_answer_create_image_ai')
-                    await self.queues_message.start(task)
-                else:
-                    print(message.text)
+            try:
+                if message.content_type == "text":
+                    if 'add_goal_name' in self.dict_user[message.from_user.id]['history'][-1]:
+                        task = asyncio.create_task(self.functions.show_add_name_goal(message))
+                        task.set_name(f'{message.from_user.id}_task_add_name_goal')
+                        await self.queues_message.start(task)
+                    elif 'add_recipient_funds' in self.dict_user[message.from_user.id]['history'][-1]:
+                        task = asyncio.create_task(self.functions.show_add_category_out(message))
+                        task.set_name(f'{message.from_user.id}_task_add_category_out')
+                        await self.queues_message.start(task)
+                    elif 'add_sender_funds' in self.dict_user[message.from_user.id]['history'][-1]:
+                        task = asyncio.create_task(self.functions.show_add_category_in(message))
+                        task.set_name(f'{message.from_user.id}_task_add_category_in')
+                        await self.queues_message.start(task)
+                    elif 'chat_ai' in self.dict_user[message.from_user.id]['history'][-1]:
+                        task = asyncio.create_task(self.functions.answer_chat_ai(message))
+                        task.set_name(f'{message.from_user.id}_task_answer_chat_ai')
+                        await self.queues_message.start(task)
+                    elif 'create_image_ai' in self.dict_user[message.from_user.id]['history'][-1]:
+                        task = asyncio.create_task(self.functions.answer_create_image_ai(message))
+                        task.set_name(f'{message.from_user.id}_task_answer_create_image_ai')
+                        await self.queues_message.start(task)
+                    else:
+                        print(message.text)
+                        await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
+                elif message.content_type == "audio":
                     await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
-            elif message.content_type == "audio":
-                await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
-                print("audio")
-            elif message.content_type == "document":
-                task = asyncio.create_task(self.functions.get_document(
-                    message, self.dict_user[message.from_user.id]['messages']))
-                await self.queues.start(message.from_user.id, task)
-            elif message.content_type == "photo":
-                if 'create_image_ai' in self.dict_user[message.from_user.id]['history'][-1]:
-                    task = asyncio.create_task(self.functions.answer_post_user_example(message))
-                    task.set_name(f'{message.from_user.id}_task_answer_post_user_example')
-                    await self.queues_message.start(task)
+                    print("audio")
+                elif message.content_type == "document":
+                    task = asyncio.create_task(self.functions.get_document(
+                        message, self.dict_user[message.from_user.id]['messages']))
+                    await self.queues.start(message.from_user.id, task)
+                elif message.content_type == "photo":
+                    try:
+                        if 'create_image_ai' in self.dict_user[message.from_user.id]['history'][-1]:
+                            task = asyncio.create_task(self.functions.answer_post_user_example(message))
+                            task.set_name(f'{message.from_user.id}_task_answer_post_user_example')
+                            await self.queues_message.start(task)
+                        else:
+                            await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
+                    except IndexError:
+                        await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
+                elif message.content_type == "sticker":
+                    await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
+                    print("sticker")
+                elif message.content_type == "video":
+                    await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
+                    print("video")
+                elif message.content_type == "video_note":
+                    await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
+                    print("video_note")
+                elif message.content_type == "voice":
+                    await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
+                    print("voice")
+                elif message.content_type == "location":
+                    await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
+                    print("location")
+                elif message.content_type == "contact":
+                    await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
+                    print("contact")
                 else:
                     await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
-            elif message.content_type == "sticker":
-                await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
-                print("sticker")
-            elif message.content_type == "video":
-                await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
-                print("video")
-            elif message.content_type == "video_note":
-                await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
-                print("video_note")
-            elif message.content_type == "voice":
-                await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
-                print("voice")
-            elif message.content_type == "location":
-                await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
-                print("location")
-            elif message.content_type == "contact":
-                await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
-                print("contact")
-            else:
+            except IndexError:
+                print(message.text)
                 await self.bot.delete_messages_chat(message.chat.id, [message.message_id])
 
         @self.callback_query(F.from_user.id.in_(self.dict_user) & (F.data == 'goal'))

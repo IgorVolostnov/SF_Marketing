@@ -116,12 +116,17 @@ class Function:
     async def show_chat(self, call_back: CallbackQuery, back_history: str = None):
         if back_history is None:
             back_ai = {'back': 'Выйти из чата 🚪'}
-            text = f'Привет! Я Ваш {self.format_text("виртуальный ассистент")}, чем могу помочь?'
+            text = f'Привет! Я Ваш {self.format_text("виртуальный ассистент")}, чем могу помочь? ' \
+                   f'Теперь при ответах я использую информацию из нашей переписки, ' \
+                   f'если Вы хотите удалить историю переписки, чтобы я её не учитывал, ' \
+                   f'просто напишите мне: {self.format_text("Новый контекст")} или перезайдите в чат.'
             try:
                 await self.edit_message(call_back.message, text, self.build_keyboard(back_ai, 1))
                 self.dict_user[call_back.from_user.id]['history'].append('chat_ai')
+                await self.ai.add_user_query(call_back.from_user.id, 'Новый контекст')
             except TelegramBadRequest:
                 self.dict_user[call_back.from_user.id]['history'].append('chat_ai')
+                await self.ai.add_user_query(call_back.from_user.id, 'Новый контекст')
         else:
             menu_ai = {'chat': 'Чат с помощником 🗣', 'create_image': 'Создание изображений 🌆', 'back': 'Назад 🔙'}
             text = f'Выберите {self.format_text("Чат")}, если хотите пообщаться с виртуальным помощником или ' \
@@ -133,10 +138,12 @@ class Function:
                 call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
             self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
         await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        await self.ai.add_user_query(call_back.from_user.id, 'Новый контекст')
         return True
 
     async def answer_chat_ai(self, message: Message):
-        answer_ai = await self.ai.answer_ai_message(message.text)
+        answer_ai, progress_message = await self.ai.answer_ai_message(message.text, message)
+        await self.bot.delete_messages_chat(message.chat.id, [progress_message.message_id])
         back_ai = {'back': 'Выйти из чата 🚪'}
         answer = await self.answer_message(message, answer_ai, self.build_keyboard(back_ai, 1))
         self.dict_user[message.from_user.id]['messages'].append(str(message.message_id))
@@ -168,11 +175,11 @@ class Function:
         return True
 
     async def answer_create_image_ai(self, message: Message):
-        answer_ai, path_photo, progress_message = await self.ai.answer_ai_image(message.text, message)
+        image_ai, path_photo, progress_message = await self.ai.answer_ai_image(message.text, message)
         await self.bot.delete_messages_chat(message.chat.id, [progress_message.message_id])
         back_ai = {'back': 'Выйти из создания изображений 🚪'}
         fs_input_file = FSInputFile(path_photo)
-        text = f"{answer_ai}"
+        text = f"{image_ai}"
         answer = await self.bot.push_photo(message.chat.id, self.format_text(text),
                                            self.build_keyboard(back_ai, 1), fs_input_file)
         self.dict_user[message.from_user.id]['messages'].append(str(message.message_id))
@@ -331,6 +338,7 @@ class Function:
             self.dict_user[user_id]['messages'].append(str(answer.message_id))
         except TelegramForbiddenError:
             self.dict_user.pop(user_id)
+            await self.execute.delete_user(user_id)
 
     async def send_recommendation(self, user_id, text_recommendation):
         ok_button = {'ок': 'OK 👌'}
@@ -341,7 +349,9 @@ class Function:
                                                                              self.dict_user[user_id]['messages'])
             self.dict_user[user_id]['messages'].append(str(answer.message_id))
         except TelegramForbiddenError:
+            await self.dispatcher.scheduler.delete_newsletter(user_id)
             self.dict_user.pop(user_id)
+            await self.execute.delete_user(user_id)
 
     async def show_info_pdf(self, user_id: int, text_document: str):
         first_keyboard = await self.keyboard.get_first_menu(self.dict_user[user_id]['history'])
