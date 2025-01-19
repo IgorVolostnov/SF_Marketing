@@ -142,7 +142,8 @@ class DispatcherMessage(Dispatcher):
         self.queues = QueuesMedia(self)
         self.scheduler = Reminders(self, self.functions, self.functions.keyboard)
         self.dict_user = self.functions.dict_user
-        self.digit = {'1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '0': 0}
+        self.digit = {'1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '0': 0, '10': 10,
+                      '11': 11, '12': 12}
         self.weekday = {'MON': 'Понедельник', 'TUE': 'Вторник', 'WED': 'Среда', 'THU': 'Четверг', 'FRI': 'Пятница',
                         'SAT': 'Суббота', 'SUN': 'Воскресенье'}
         self.dict_time = {'06:00': '06:00', '07:00': '07:00', '08:00': '08:00', '09:00': '09:00', '10:00': '10:00',
@@ -348,6 +349,18 @@ class DispatcherMessage(Dispatcher):
         async def send_reminder_time(callback: CallbackQuery):
             task = asyncio.create_task(self.functions.show_reminder_time(callback))
             task.set_name(f'{callback.from_user.id}_task_reminder_time')
+            await self.queues_message.start(task)
+
+        @self.callback_query(F.from_user.id.in_(self.dict_user) & (F.data == 'show_calculater'))
+        async def send_show_calculater_message(callback: CallbackQuery):
+            task = asyncio.create_task(self.functions.show_calculater(callback))
+            task.set_name(f'{callback.from_user.id}_task_show_calculater')
+            await self.queues_message.start(task)
+
+        @self.callback_query(F.from_user.id.in_(self.dict_user) & (F.data == 'done_month_calculator'))
+        async def send_done_month_calculator_message(callback: CallbackQuery):
+            task = asyncio.create_task(self.functions.show_done_month_calculator(callback))
+            task.set_name(f'{callback.from_user.id}_task_done_month_calculator')
             await self.queues_message.start(task)
 
         @self.callback_query(F.from_user.id.in_(self.dict_user) & (F.data == 'show_goal'))

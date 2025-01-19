@@ -17,6 +17,7 @@ cffi==1.17.1
 charset-normalizer==3.3.2
 colorama==0.4.6
 contourpy==1.1.1
+convertdate==2.4.0
 cryptography==43.0.1
 cycler==0.12.1
 exceptiongroup==1.2.2
@@ -34,6 +35,7 @@ idna==3.10
 importlib_resources==6.4.5
 kaleido==0.2.1
 kiwisolver==1.4.7
+lunardate==0.2.2
 magic-filter==1.0.12
 matplotlib==3.7.5
 multidict==6.1.0
@@ -50,6 +52,8 @@ pycparser==2.22
 pycryptodome==3.21.0
 pydantic==2.8.2
 pydantic_core==2.20.1
+pyluach==2.2.0
+PyMeeus==0.5.12
 pyparsing==3.1.4
 PyPDF2==3.0.1
 pypdfium2==4.30.0
@@ -70,5 +74,6 @@ tzlocal==5.2
 urllib3==2.2.3
 wcwidth==0.2.13
 websockets==12.0
+workalendar==17.0.0
 yarl==1.13.1
 zipp==3.20.2

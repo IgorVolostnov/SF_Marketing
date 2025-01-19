@@ -43,6 +43,7 @@ class KeyBoardBot:
         button_income_keyboard = {'add_new_income': 'Добавить новые доходы ➕',
                                   'show_income': 'Показать список доходов 👀',
                                   'analytic_income': 'Аналитика доходов 📊',
+                                  'show_calculater': 'Показать ЗП калькулятор 🧮💰',
                                   'back': 'Назад 🔙'}
         return button_income_keyboard
 
@@ -207,6 +208,15 @@ class KeyBoardBot:
                       '7': '7⃣', '8': '8️⃣', '9': '9⃣',
                       'minus': '➖', '0': '0️⃣', 'plus': '➕',
                       'back': 'Назад 🔙', 'delete': '⌫'}
+        return calculater
+
+    @staticmethod
+    async def get_month_calculater() -> dict:
+        calculater = {'1': 'Январь❄', '2': 'Февраль🥶', '3': 'Март🌷',
+                      '4': 'Апрель🌺', '5': 'Май🐝', '6': 'Июнь🌈',
+                      '7': 'Июль🌞', '8': 'Август🍎', '9': 'Сентябрь🌦',
+                      '10': 'Октябрь🍁', '11': 'Ноябрь🍂', '12': 'Декабрь🎄',
+                      'back': 'Назад 🔙'}
         return calculater
 
     @staticmethod

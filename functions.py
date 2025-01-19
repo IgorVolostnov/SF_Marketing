@@ -1,9 +1,13 @@
 import asyncio
+import json
 import logging
 import re
 import os
 import phonenumbers
-from datetime import date
+import locale
+import calendar
+from datetime import date, datetime
+from calendar_rus import Rus
 from dateutil.relativedelta import relativedelta
 from keyboard import KeyBoardBot
 from database_requests import Execute
@@ -17,6 +21,7 @@ from aiogram.enums.parse_mode import ParseMode
 from aiogram.utils.media_group import MediaGroupBuilder
 
 logging.basicConfig(level=logging.INFO)
+locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
 
 
 class Function:
@@ -31,6 +36,7 @@ class Function:
         self.info_pdf = GetTextOCR()
         self.ai = AI(self)
         self.diagram = UserCosts()
+        self.my_calendar = Rus()
         self.dict_user = asyncio.run(self.execute.get_dict_user)
         self.dict_goal = asyncio.run(self.execute.get_dict_goal)
         self.dict_outlay = asyncio.run(self.execute.get_dict_outlay)
@@ -85,6 +91,8 @@ class Function:
                 await self.show_done_category_out(call_back, previous_history)
             elif self.dict_user[call_back.from_user.id]['history'][-1] == 'choose_category_in':
                 await self.show_done_category_in(call_back, previous_history)
+            elif "show_calculater" in self.dict_user[call_back.from_user.id]['history'][-1]:
+                await self.show_done_month_calculator(call_back, previous_history)
             else:
                 await self.return_start(call_back)
             return True
@@ -143,7 +151,7 @@ class Function:
 
     async def answer_chat_ai(self, message: Message):
         answer_ai, progress_message = await self.ai.answer_ai_message(message.text, message)
-        await self.bot.delete_messages_chat(message.chat.id, [progress_message.message_id])
+        await self.bot.delete_messages_chat(message.chat.id, [progress_message[message.from_user.id].message_id])
         back_ai = {'back': 'Выйти из чата 🚪'}
         answer = await self.answer_message(message, answer_ai, self.build_keyboard(back_ai, 1))
         self.dict_user[message.from_user.id]['messages'].append(str(message.message_id))
@@ -159,8 +167,10 @@ class Function:
             try:
                 await self.edit_message(call_back.message, text, self.build_keyboard(back_ai, 1))
                 self.dict_user[call_back.from_user.id]['history'].append('create_image_ai')
+                await self.ai.get_general_image(call_back.from_user.id, 'Новый контекст')
             except TelegramBadRequest:
                 self.dict_user[call_back.from_user.id]['history'].append('create_image_ai')
+                await self.ai.get_general_image(call_back.from_user.id, 'Новый контекст')
         else:
             menu_ai = {'chat': 'Чат с помощником 🗣', 'create_image': 'Создание изображений 🌆', 'back': 'Назад 🔙'}
             text = f'Выберите {self.format_text("Чат")}, если хотите пообщаться с виртуальным помощником или ' \
@@ -176,7 +186,7 @@ class Function:
 
     async def answer_create_image_ai(self, message: Message):
         image_ai, path_photo, progress_message = await self.ai.answer_ai_image(message.text, message)
-        await self.bot.delete_messages_chat(message.chat.id, [progress_message.message_id])
+        await self.bot.delete_messages_chat(message.chat.id, [progress_message[message.from_user.id].message_id])
         back_ai = {'back': 'Выйти из создания изображений 🚪'}
         fs_input_file = FSInputFile(path_photo)
         text = f"{image_ai}"
@@ -190,7 +200,7 @@ class Function:
     async def answer_post_user_example(self, message: Message):
         photo_info = await self.bot.save_photo(message)
         selling_text, progress_message = await self.ai.post_by_user_photo(photo_info[1], photo_info[0], message)
-        await self.bot.delete_messages_chat(message.chat.id, [progress_message.message_id])
+        await self.bot.delete_messages_chat(message.chat.id, [progress_message[message.from_user.id].message_id])
         back_ai = {'back': 'Выйти из создания изображений 🚪'}
         answer = await self.answer_message(message, selling_text, self.build_keyboard(back_ai, 1))
         self.dict_user[message.from_user.id]['messages'].append(str(message.message_id))
@@ -304,6 +314,7 @@ class Function:
                    f"{self.format_text('Показать список доходов 👀')} " \
                    f"- вывести на экран список всех доходов за месяц\n" \
                    f"{self.format_text('Аналитика доходов 📊')} - показать распределение доходов по категориям\n" \
+                   f"{self.format_text('Показать ЗП калькулятор 🧮💰')} - посчитать свою ЗП\n" \
                    f"{self.format_text('Назад 🔙')} - вернуться в предыдущее меню\n"
             answer = await self.bot.push_photo(message.chat.id, text, self.build_keyboard(keyboard_income, 1),
                                                self.bot.logo_main_menu)
@@ -337,8 +348,11 @@ class Function:
                                                self.bot.logo_main_menu)
             self.dict_user[user_id]['messages'].append(str(answer.message_id))
         except TelegramForbiddenError:
-            self.dict_user.pop(user_id)
-            await self.execute.delete_user(user_id)
+            try:
+                self.dict_user.pop(user_id)
+                await self.execute.delete_user(user_id)
+            except KeyError:
+                await self.execute.delete_user(user_id)
 
     async def send_recommendation(self, user_id, text_recommendation):
         ok_button = {'ок': 'OK 👌'}
@@ -402,6 +416,7 @@ class Function:
                f"{self.format_text('Показать список доходов 👀')} " \
                f"- вывести на экран список всех доходов за месяц\n" \
                f"{self.format_text('Аналитика доходов 📊')} - показать распределение доходов по категориям\n" \
+               f"{self.format_text('Показать ЗП калькулятор 🧮💰')} - посчитать свою ЗП\n" \
                f"{self.format_text('Назад 🔙')} - вернуться в предыдущее меню\n"
         answer = await self.bot.push_photo(call_back.message.chat.id, text, self.build_keyboard(keyboard_income, 1),
                                            self.bot.logo_income_menu)
@@ -519,6 +534,8 @@ class Function:
             await self.change_sum_outlay(call_back)
         elif self.dict_user[call_back.from_user.id]['history'][-1] == 'add_sum_income':
             await self.change_sum_income(call_back)
+        elif 'show_calculater' in self.dict_user[call_back.from_user.id]['history'][-1]:
+            await self.change_month_calculater(call_back)
         else:
             print(f"Калькулятор там, где не нужно: {self.dict_user[call_back.from_user.id]['history'][-1]}")
         return True
@@ -652,6 +669,34 @@ class Function:
             await self.execute.update_income(row_id, self.dict_income[row_id])
         except TelegramBadRequest:
             await self.execute.update_income(row_id, self.dict_income[row_id])
+
+    async def change_month_calculater(self, call_back: CallbackQuery):
+        current_date = date.today()
+        current_year = current_date.year
+        current_month = int(call_back.data)
+        last_day = calendar.monthrange(current_year, current_month)[1]
+        days = (datetime(current_year, current_month, x) for x in range(1, last_day + 1))
+        days = map(lambda day: self.my_calendar.is_working_day(day), days)
+        work_days = sum(days)
+        keyboard_calculater = await self.keyboard.get_month_calculater()
+        button_done = {'done_month_calculator': 'Готово ✅'}
+        text_in_message = 'Выберите месяц для расчета ЗП:'
+        text = f"{self.format_text(text_in_message)}\n " \
+               f"Количество рабочих дней:\n" \
+               f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+               f"{self.format_text(str(work_days))}"
+        self.dict_user[call_back.from_user.id]['history'].pop()
+        dict_calculator = json.loads('{"show_calculater": ""}')
+        dict_calculator["show_calculater"] = {"current_year": current_year, "current_month": current_month}
+        str_calculator = json.dumps(dict_calculator)
+        self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        try:
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 3, button_done))
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        except TelegramBadRequest:
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
 
     async def show_minus(self, call_back: CallbackQuery):
         if self.dict_user[call_back.from_user.id]['history'][-1] == 'add_sum_goal':
@@ -1765,12 +1810,108 @@ class Function:
                    f"{self.format_text('Показать список доходов 👀')} " \
                    f"- вывести на экран список всех доходов за месяц\n" \
                    f"{self.format_text('Аналитика доходов 📊')} - показать распределение доходов по категориям\n" \
+                   f"{self.format_text('Показать ЗП калькулятор 🧮💰')} - посчитать свою ЗП\n" \
                    f"{self.format_text('Назад 🔙')} - вернуться в предыдущее меню\n"
-            if back_history == 'add_sum_income':
+            if back_history == 'add_sum_income' or "show_calculater" in back_history:
                 await self.edit_caption(call_back.message, text, self.build_keyboard(keyboard_income, 1))
             else:
                 answer = await self.bot.push_photo(call_back.message.chat.id, text,
                                                    self.build_keyboard(keyboard_income, 1), self.bot.logo_income_menu)
+                self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
+                    call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
+                self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
+        await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        return True
+
+    async def show_calculater(self, call_back: CallbackQuery, back_history: str = None):
+        if back_history is None:
+            current_date = date.today()
+            current_year = current_date.year
+            current_month = current_date.month
+            last_day = calendar.monthrange(current_year, current_month)[1]
+            days = (datetime(current_year, current_month, x) for x in range(1, last_day + 1))
+            days = map(lambda day: self.my_calendar.is_working_day(day), days)
+            work_days = sum(days)
+            keyboard_calculater = await self.keyboard.get_month_calculater()
+            button_done = {'done_month_calculator': 'Готово ✅'}
+            text_in_message = 'Выберите месяц для расчета ЗП:'
+            text = f"{self.format_text(text_in_message)}\n " \
+                   f"Количество рабочих дней:\n" \
+                   f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+                   f"{self.format_text(str(work_days))}"
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 3, button_done))
+            dict_calculator = json.loads('{"show_calculater": ""}')
+            dict_calculator["show_calculater"] = {"current_year": current_year, "current_month": current_month}
+            str_calculator = json.dumps(dict_calculator)
+            self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        else:
+            keyboard_income = await self.keyboard.get_income_menu()
+            text = f"{self.format_text('Добавить новые доходы ➕')} - добавьте новые доходы\n" \
+                   f"{self.format_text('Показать список доходов 👀')} " \
+                   f"- вывести на экран список всех доходов за месяц\n" \
+                   f"{self.format_text('Аналитика доходов 📊')} - показать распределение доходов по категориям\n" \
+                   f"{self.format_text('Показать ЗП калькулятор 🧮💰')} - посчитать свою ЗП\n" \
+                   f"{self.format_text('Назад 🔙')} - вернуться в предыдущее меню\n"
+            if "show_calculater" in back_history:
+                await self.edit_caption(call_back.message, text, self.build_keyboard(keyboard_income, 1))
+            else:
+                answer = await self.bot.push_photo(call_back.message.chat.id, text,
+                                                   self.build_keyboard(keyboard_income, 1), self.bot.logo_income_menu)
+                self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
+                    call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
+                self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
+        await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        return True
+
+    async def show_done_month_calculator(self, call_back: CallbackQuery, back_history: str = None):
+        dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+        current_year = dict_calculator["show_calculater"]["current_year"]
+        current_month = dict_calculator["show_calculater"]["current_month"]
+        last_day = calendar.monthrange(current_year, current_month)[1]
+        days = (datetime(current_year, current_month, x) for x in range(1, last_day + 1))
+        days = map(lambda day: self.my_calendar.is_working_day(day), days)
+        work_days = sum(days)
+        if back_history is None:
+            keyboard_calculater = await self.keyboard.get_calculater()
+            button_done = {'done_work_days_calculator': 'Готово ✅'}
+            text_in_message = 'Выберите количество отработанных дней:'
+            text = f"{self.format_text(text_in_message)}\n " \
+                   f"Количество рабочих дней:\n" \
+                   f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+                   f"{self.format_text(str(work_days))}\n" \
+                   f"Количество отработанных дней: {self.format_text(str(work_days))}"
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 3, button_done))
+            dict_calculator = json.loads('{"show_work_days": ""}')
+            dict_calculator["show_work_days"] = {"current_year": current_year, "current_month": current_month,
+                                                 "work_days": work_days}
+            str_calculator = json.dumps(dict_calculator)
+            self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        else:
+            dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+            current_year = dict_calculator["show_calculater"]["current_year"]
+            current_month = dict_calculator["show_calculater"]["current_month"]
+            last_day = calendar.monthrange(current_year, current_month)[1]
+            days = (datetime(current_year, current_month, x) for x in range(1, last_day + 1))
+            days = map(lambda day: self.my_calendar.is_working_day(day), days)
+            work_days = sum(days)
+            keyboard_calculater = await self.keyboard.get_month_calculater()
+            button_done = {'done_month_calculator': 'Готово ✅'}
+            text_in_message = 'Выберите месяц для расчета ЗП:'
+            text = f"{self.format_text(text_in_message)}\n " \
+                   f"Количество рабочих дней:\n" \
+                   f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+                   f"{self.format_text(str(work_days))}"
+            if "show_work_days" in back_history:
+                await self.edit_caption(call_back.message, text, self.build_keyboard(keyboard_calculater, 3,
+                                                                                     button_done))
+            else:
+                answer = await self.bot.push_photo(call_back.message.chat.id, text,
+                                                   self.build_keyboard(keyboard_calculater, 3, button_done),
+                                                   self.bot.logo_income_menu)
                 self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
                     call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
                 self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
@@ -2572,7 +2713,10 @@ class Function:
 
     @staticmethod
     async def answer_message(message: Message, text: str, keyboard: InlineKeyboardMarkup):
-        return await message.answer(text=text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
+        try:
+            return await message.answer(text=text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
+        except TelegramBadRequest:
+            return await message.answer(text=text, parse_mode=None, reply_markup=keyboard)
 
     @staticmethod
     async def edit_message(message: Message, text: str, keyboard: InlineKeyboardMarkup):
