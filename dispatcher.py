@@ -363,6 +363,12 @@ class DispatcherMessage(Dispatcher):
             task.set_name(f'{callback.from_user.id}_task_done_month_calculator')
             await self.queues_message.start(task)
 
+        @self.callback_query(F.from_user.id.in_(self.dict_user) & (F.data == 'done_work_days_calculator'))
+        async def send_done_work_days_calculator_message(callback: CallbackQuery):
+            task = asyncio.create_task(self.functions.show_done_work_days_calculator(callback))
+            task.set_name(f'{callback.from_user.id}_task_done_work_days_calculator')
+            await self.queues_message.start(task)
+
         @self.callback_query(F.from_user.id.in_(self.dict_user) & (F.data == 'show_goal'))
         async def send_show_goal(callback: CallbackQuery):
             task = asyncio.create_task(self.functions.show_list_goals(callback))

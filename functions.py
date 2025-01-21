@@ -6,7 +6,7 @@ import os
 import phonenumbers
 import locale
 import calendar
-from datetime import date, datetime
+from datetime import date
 from calendar_rus import Rus
 from dateutil.relativedelta import relativedelta
 from keyboard import KeyBoardBot
@@ -93,6 +93,8 @@ class Function:
                 await self.show_done_category_in(call_back, previous_history)
             elif "show_calculater" in self.dict_user[call_back.from_user.id]['history'][-1]:
                 await self.show_done_month_calculator(call_back, previous_history)
+            elif "show_work_days" in self.dict_user[call_back.from_user.id]['history'][-1]:
+                await self.show_done_work_days_calculator(call_back, previous_history)
             else:
                 await self.return_start(call_back)
             return True
@@ -153,9 +155,10 @@ class Function:
         answer_ai, progress_message = await self.ai.answer_ai_message(message.text, message)
         await self.bot.delete_messages_chat(message.chat.id, [progress_message[message.from_user.id].message_id])
         back_ai = {'back': 'Выйти из чата 🚪'}
-        answer = await self.answer_message(message, answer_ai, self.build_keyboard(back_ai, 1))
-        self.dict_user[message.from_user.id]['messages'].append(str(message.message_id))
-        self.dict_user[message.from_user.id]['messages'].append(str(answer.message_id))
+        for message_ai in answer_ai:
+            answer = await self.answer_message(message, message_ai, self.build_keyboard(back_ai, 1))
+            self.dict_user[message.from_user.id]['messages'].append(str(message.message_id))
+            self.dict_user[message.from_user.id]['messages'].append(str(answer.message_id))
         await self.execute.update_user(message.from_user.id, self.dict_user[message.from_user.id])
         return True
 
@@ -536,6 +539,10 @@ class Function:
             await self.change_sum_income(call_back)
         elif 'show_calculater' in self.dict_user[call_back.from_user.id]['history'][-1]:
             await self.change_month_calculater(call_back)
+        elif 'show_work_days' in self.dict_user[call_back.from_user.id]['history'][-1]:
+            await self.change_work_days(call_back)
+        elif 'show_salary_amount' in self.dict_user[call_back.from_user.id]['history'][-1]:
+            await self.change_salary_amount(call_back)
         else:
             print(f"Калькулятор там, где не нужно: {self.dict_user[call_back.from_user.id]['history'][-1]}")
         return True
@@ -671,23 +678,76 @@ class Function:
             await self.execute.update_income(row_id, self.dict_income[row_id])
 
     async def change_month_calculater(self, call_back: CallbackQuery):
-        current_date = date.today()
-        current_year = current_date.year
-        current_month = int(call_back.data)
-        last_day = calendar.monthrange(current_year, current_month)[1]
-        days = (datetime(current_year, current_month, x) for x in range(1, last_day + 1))
-        days = map(lambda day: self.my_calendar.is_working_day(day), days)
-        work_days = sum(days)
+        amount_work_days = self.my_calendar.amount_work_days_month(int(call_back.data))
         keyboard_calculater = await self.keyboard.get_month_calculater()
         button_done = {'done_month_calculator': 'Готово ✅'}
         text_in_message = 'Выберите месяц для расчета ЗП:'
         text = f"{self.format_text(text_in_message)}\n " \
                f"Количество рабочих дней:\n" \
-               f"{self.format_text(calendar.month_name[current_month].lower())} - " \
-               f"{self.format_text(str(work_days))}"
+               f"{self.format_text(calendar.month_name[int(call_back.data)].lower())} - " \
+               f"{self.format_text(str(amount_work_days))}"
         self.dict_user[call_back.from_user.id]['history'].pop()
         dict_calculator = json.loads('{"show_calculater": ""}')
-        dict_calculator["show_calculater"] = {"current_year": current_year, "current_month": current_month}
+        dict_calculator["show_calculater"] = {"current_year": 2025, "current_month": int(call_back.data)}
+        str_calculator = json.dumps(dict_calculator)
+        self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        try:
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 3, button_done))
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        except TelegramBadRequest:
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+
+    async def change_work_days(self, call_back: CallbackQuery):
+        dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+        current_year = dict_calculator["show_work_days"]["current_year"]
+        current_month = dict_calculator["show_work_days"]["current_month"]
+        amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+        amount = await self.get_amount(call_back.message.caption, call_back.data, "Количество отработанных дней: ",
+                                       check_amount=amount_work_days)
+        keyboard_calculater = await self.keyboard.get_calculater()
+        button_done = {'done_work_days_calculator': 'Готово ✅'}
+        text_in_message = 'Выберите количество отработанных дней:'
+        text = f"{self.format_text(text_in_message)}\n " \
+               f"Количество рабочих дней:\n" \
+               f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+               f"{self.format_text(str(amount_work_days))}\n" \
+               f"Количество отработанных дней: {self.format_text(amount)}"
+        self.dict_user[call_back.from_user.id]['history'].pop()
+        dict_calculator = json.loads('{"show_work_days": ""}')
+        dict_calculator["show_work_days"] = {"current_year": current_year, "current_month": current_month,
+                                             "work_days": int(amount)}
+        str_calculator = json.dumps(dict_calculator)
+        self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        try:
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 3, button_done))
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        except TelegramBadRequest:
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+
+    async def change_salary_amount(self, call_back: CallbackQuery):
+        dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+        current_year = dict_calculator["show_salary_amount"]["current_year"]
+        current_month = dict_calculator["show_salary_amount"]["current_month"]
+        amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+        work_days = dict_calculator["show_salary_amount"]["current_month"]
+        amount = await self.get_amount(call_back.message.caption, call_back.data, "Оклад: ", " ₽", check_amount=100000)
+        keyboard_calculater = await self.keyboard.get_calculater()
+        button_done = {'done_salary_amount_calculator': 'Готово ✅'}
+        text_in_message = 'Введите размер Вашего оклада:'
+        text = f"{self.format_text(text_in_message)}\n " \
+               f"Количество рабочих дней:\n" \
+               f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+               f"{self.format_text(str(amount_work_days))}\n" \
+               f"Количество отработанных дней: {self.format_text(str(work_days))}\n" \
+               f"Оклад: {self.format_text('{0:,}'.format(int(amount)).replace(',', ' '))} ₽"
+        self.dict_user[call_back.from_user.id]['history'].pop()
+        dict_calculator = json.loads('{"show_salary_amount": ""}')
+        dict_calculator["show_salary_amount"] = {"current_year": current_year, "current_month": current_month,
+                                                 "work_days": work_days, "salary_amount": int(amount)}
         str_calculator = json.dumps(dict_calculator)
         self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
         try:
@@ -711,6 +771,10 @@ class Function:
             await self.minus_sum_outlay(call_back)
         elif self.dict_user[call_back.from_user.id]['history'][-1] == 'add_sum_income':
             await self.minus_sum_income(call_back)
+        elif 'show_work_days' in self.dict_user[call_back.from_user.id]['history'][-1]:
+            await self.minus_work_days(call_back)
+        elif 'show_salary_amount' in self.dict_user[call_back.from_user.id]['history'][-1]:
+            await self.minus_salary_amount(call_back)
         else:
             print(f"Калькулятор там, где не нужно: {self.dict_user[call_back.from_user.id]['history'][-1]}")
         return True
@@ -845,6 +909,64 @@ class Function:
         except TelegramBadRequest:
             await self.execute.update_income(row_id, self.dict_income[row_id])
 
+    async def minus_work_days(self, call_back: CallbackQuery):
+        dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+        current_year = dict_calculator["show_work_days"]["current_year"]
+        current_month = dict_calculator["show_work_days"]["current_month"]
+        amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+        amount = await self.get_amount_minus(call_back.message.caption, "Количество отработанных дней: ")
+        keyboard_calculater = await self.keyboard.get_calculater()
+        button_done = {'done_work_days_calculator': 'Готово ✅'}
+        text_in_message = 'Выберите количество отработанных дней:'
+        text = f"{self.format_text(text_in_message)}\n " \
+               f"Количество рабочих дней:\n" \
+               f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+               f"{self.format_text(str(amount_work_days))}\n" \
+               f"Количество отработанных дней: {self.format_text(amount)}"
+        self.dict_user[call_back.from_user.id]['history'].pop()
+        dict_calculator = json.loads('{"show_work_days": ""}')
+        dict_calculator["show_work_days"] = {"current_year": current_year, "current_month": current_month,
+                                             "work_days": int(amount)}
+        str_calculator = json.dumps(dict_calculator)
+        self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        try:
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 3, button_done))
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        except TelegramBadRequest:
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+
+    async def minus_salary_amount(self, call_back: CallbackQuery):
+        dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+        current_year = dict_calculator["show_salary_amount"]["current_year"]
+        current_month = dict_calculator["show_salary_amount"]["current_month"]
+        amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+        work_days = dict_calculator["show_salary_amount"]["current_month"]
+        amount = await self.get_amount_minus(call_back.message.caption, "Оклад: ", " ₽")
+        keyboard_calculater = await self.keyboard.get_calculater()
+        button_done = {'done_salary_amount_calculator': 'Готово ✅'}
+        text_in_message = 'Введите размер Вашего оклада:'
+        text = f"{self.format_text(text_in_message)}\n " \
+               f"Количество рабочих дней:\n" \
+               f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+               f"{self.format_text(str(amount_work_days))}\n" \
+               f"Количество отработанных дней: {self.format_text(str(work_days))}\n" \
+               f"Оклад: {self.format_text('{0:,}'.format(int(amount)).replace(',', ' '))} ₽"
+        self.dict_user[call_back.from_user.id]['history'].pop()
+        dict_calculator = json.loads('{"show_salary_amount": ""}')
+        dict_calculator["show_salary_amount"] = {"current_year": current_year, "current_month": current_month,
+                                                 "work_days": work_days, "salary_amount": int(amount)}
+        str_calculator = json.dumps(dict_calculator)
+        self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        try:
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 3, button_done))
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        except TelegramBadRequest:
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+
     async def show_plus(self, call_back: CallbackQuery):
         if self.dict_user[call_back.from_user.id]['history'][-1] == 'add_sum_goal':
             await self.plus_sum_goal(call_back)
@@ -858,6 +980,10 @@ class Function:
             await self.plus_sum_outlay(call_back)
         elif self.dict_user[call_back.from_user.id]['history'][-1] == 'add_sum_income':
             await self.plus_sum_income(call_back)
+        elif 'show_work_days' in self.dict_user[call_back.from_user.id]['history'][-1]:
+            await self.plus_work_days(call_back)
+        elif 'show_salary_amount' in self.dict_user[call_back.from_user.id]['history'][-1]:
+            await self.plus_salary_amount(call_back)
         else:
             print(f"Калькулятор там, где не нужно: {self.dict_user[call_back.from_user.id]['history'][-1]}")
         return True
@@ -992,6 +1118,65 @@ class Function:
         except TelegramBadRequest:
             await self.execute.update_income(row_id, self.dict_income[row_id])
 
+    async def plus_work_days(self, call_back: CallbackQuery):
+        dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+        current_year = dict_calculator["show_work_days"]["current_year"]
+        current_month = dict_calculator["show_work_days"]["current_month"]
+        amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+        amount = await self.get_amount_plus(call_back.message.caption, "Количество отработанных дней: ",
+                                            check_amount=amount_work_days)
+        keyboard_calculater = await self.keyboard.get_calculater()
+        button_done = {'done_work_days_calculator': 'Готово ✅'}
+        text_in_message = 'Выберите количество отработанных дней:'
+        text = f"{self.format_text(text_in_message)}\n " \
+               f"Количество рабочих дней:\n" \
+               f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+               f"{self.format_text(str(amount_work_days))}\n" \
+               f"Количество отработанных дней: {self.format_text(amount)}"
+        self.dict_user[call_back.from_user.id]['history'].pop()
+        dict_calculator = json.loads('{"show_work_days": ""}')
+        dict_calculator["show_work_days"] = {"current_year": current_year, "current_month": current_month,
+                                             "work_days": int(amount)}
+        str_calculator = json.dumps(dict_calculator)
+        self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        try:
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 3, button_done))
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        except TelegramBadRequest:
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+
+    async def plus_salary_amount(self, call_back: CallbackQuery):
+        dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+        current_year = dict_calculator["show_salary_amount"]["current_year"]
+        current_month = dict_calculator["show_salary_amount"]["current_month"]
+        amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+        work_days = dict_calculator["show_salary_amount"]["current_month"]
+        amount = await self.get_amount_plus(call_back.message.caption, "Оклад: ", " ₽", check_amount=100000)
+        keyboard_calculater = await self.keyboard.get_calculater()
+        button_done = {'done_salary_amount_calculator': 'Готово ✅'}
+        text_in_message = 'Введите размер Вашего оклада:'
+        text = f"{self.format_text(text_in_message)}\n " \
+               f"Количество рабочих дней:\n" \
+               f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+               f"{self.format_text(str(amount_work_days))}\n" \
+               f"Количество отработанных дней: {self.format_text(str(work_days))}\n" \
+               f"Оклад: {self.format_text('{0:,}'.format(int(amount)).replace(',', ' '))} ₽"
+        self.dict_user[call_back.from_user.id]['history'].pop()
+        dict_calculator = json.loads('{"show_salary_amount": ""}')
+        dict_calculator["show_salary_amount"] = {"current_year": current_year, "current_month": current_month,
+                                                 "work_days": work_days, "salary_amount": int(amount)}
+        str_calculator = json.dumps(dict_calculator)
+        self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        try:
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 3, button_done))
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        except TelegramBadRequest:
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+
     async def show_delete(self, call_back: CallbackQuery):
         if self.dict_user[call_back.from_user.id]['history'][-1] == 'add_sum_goal':
             await self.delete_sum_goal(call_back)
@@ -1005,6 +1190,10 @@ class Function:
             await self.delete_sum_outlay(call_back)
         elif self.dict_user[call_back.from_user.id]['history'][-1] == 'add_sum_income':
             await self.delete_sum_income(call_back)
+        elif 'show_work_days' in self.dict_user[call_back.from_user.id]['history'][-1]:
+            await self.delete_work_days(call_back)
+        elif 'show_salary_amount' in self.dict_user[call_back.from_user.id]['history'][-1]:
+            await self.delete_salary_amount(call_back)
         else:
             print(f"Калькулятор там, где не нужно: {self.dict_user[call_back.from_user.id]['history'][-1]}")
         return True
@@ -1138,6 +1327,64 @@ class Function:
             await self.execute.update_income(row_id, self.dict_income[row_id])
         except TelegramBadRequest:
             await self.execute.update_income(row_id, self.dict_income[row_id])
+
+    async def delete_work_days(self, call_back: CallbackQuery):
+        dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+        current_year = dict_calculator["show_work_days"]["current_year"]
+        current_month = dict_calculator["show_work_days"]["current_month"]
+        amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+        amount = await self.get_amount_delete(call_back.message.caption, "Количество отработанных дней: ")
+        keyboard_calculater = await self.keyboard.get_calculater()
+        button_done = {'done_work_days_calculator': 'Готово ✅'}
+        text_in_message = 'Выберите количество отработанных дней:'
+        text = f"{self.format_text(text_in_message)}\n " \
+               f"Количество рабочих дней:\n" \
+               f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+               f"{self.format_text(str(amount_work_days))}\n" \
+               f"Количество отработанных дней: {self.format_text(amount)}"
+        self.dict_user[call_back.from_user.id]['history'].pop()
+        dict_calculator = json.loads('{"show_work_days": ""}')
+        dict_calculator["show_work_days"] = {"current_year": current_year, "current_month": current_month,
+                                             "work_days": int(amount)}
+        str_calculator = json.dumps(dict_calculator)
+        self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        try:
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 3, button_done))
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        except TelegramBadRequest:
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+
+    async def delete_salary_amount(self, call_back: CallbackQuery):
+        dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+        current_year = dict_calculator["show_salary_amount"]["current_year"]
+        current_month = dict_calculator["show_salary_amount"]["current_month"]
+        amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+        work_days = dict_calculator["show_salary_amount"]["current_month"]
+        amount = await self.get_amount_delete(call_back.message.caption, "Оклад: ", " ₽")
+        keyboard_calculater = await self.keyboard.get_calculater()
+        button_done = {'done_salary_amount_calculator': 'Готово ✅'}
+        text_in_message = 'Введите размер Вашего оклада:'
+        text = f"{self.format_text(text_in_message)}\n " \
+               f"Количество рабочих дней:\n" \
+               f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+               f"{self.format_text(str(amount_work_days))}\n" \
+               f"Количество отработанных дней: {self.format_text(str(work_days))}\n" \
+               f"Оклад: {self.format_text('{0:,}'.format(int(amount)).replace(',', ' '))} ₽"
+        self.dict_user[call_back.from_user.id]['history'].pop()
+        dict_calculator = json.loads('{"show_salary_amount": ""}')
+        dict_calculator["show_salary_amount"] = {"current_year": current_year, "current_month": current_month,
+                                                 "work_days": work_days, "salary_amount": int(amount)}
+        str_calculator = json.dumps(dict_calculator)
+        self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        try:
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 3, button_done))
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        except TelegramBadRequest:
+            await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
 
     async def show_done_sum_goal(self, call_back: CallbackQuery, back_history: str = None):
         row_id = await self.execute.check_new_goal(call_back.from_user.id)
@@ -1825,25 +2072,20 @@ class Function:
 
     async def show_calculater(self, call_back: CallbackQuery, back_history: str = None):
         if back_history is None:
-            current_date = date.today()
-            current_year = current_date.year
-            current_month = current_date.month
-            last_day = calendar.monthrange(current_year, current_month)[1]
-            days = (datetime(current_year, current_month, x) for x in range(1, last_day + 1))
-            days = map(lambda day: self.my_calendar.is_working_day(day), days)
-            work_days = sum(days)
+            current_month = date.today().month
+            amount_work_days = self.my_calendar.amount_work_days_month(current_month)
             keyboard_calculater = await self.keyboard.get_month_calculater()
             button_done = {'done_month_calculator': 'Готово ✅'}
             text_in_message = 'Выберите месяц для расчета ЗП:'
             text = f"{self.format_text(text_in_message)}\n " \
                    f"Количество рабочих дней:\n" \
                    f"{self.format_text(calendar.month_name[current_month].lower())} - " \
-                   f"{self.format_text(str(work_days))}"
+                   f"{self.format_text(str(amount_work_days))}"
             await self.bot.edit_head_caption(text, call_back.message.chat.id,
                                              self.dict_user[call_back.from_user.id]['messages'][-1],
                                              self.build_keyboard(keyboard_calculater, 3, button_done))
             dict_calculator = json.loads('{"show_calculater": ""}')
-            dict_calculator["show_calculater"] = {"current_year": current_year, "current_month": current_month}
+            dict_calculator["show_calculater"] = {"current_year": 2025, "current_month": current_month}
             str_calculator = json.dumps(dict_calculator)
             self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
         else:
@@ -1869,10 +2111,7 @@ class Function:
         dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
         current_year = dict_calculator["show_calculater"]["current_year"]
         current_month = dict_calculator["show_calculater"]["current_month"]
-        last_day = calendar.monthrange(current_year, current_month)[1]
-        days = (datetime(current_year, current_month, x) for x in range(1, last_day + 1))
-        days = map(lambda day: self.my_calendar.is_working_day(day), days)
-        work_days = sum(days)
+        amount_work_days = self.my_calendar.amount_work_days_month(current_month)
         if back_history is None:
             keyboard_calculater = await self.keyboard.get_calculater()
             button_done = {'done_work_days_calculator': 'Готово ✅'}
@@ -1880,32 +2119,78 @@ class Function:
             text = f"{self.format_text(text_in_message)}\n " \
                    f"Количество рабочих дней:\n" \
                    f"{self.format_text(calendar.month_name[current_month].lower())} - " \
-                   f"{self.format_text(str(work_days))}\n" \
-                   f"Количество отработанных дней: {self.format_text(str(work_days))}"
+                   f"{self.format_text(str(amount_work_days))}\n" \
+                   f"Количество отработанных дней: {self.format_text(str(amount_work_days))}"
             await self.bot.edit_head_caption(text, call_back.message.chat.id,
                                              self.dict_user[call_back.from_user.id]['messages'][-1],
                                              self.build_keyboard(keyboard_calculater, 3, button_done))
             dict_calculator = json.loads('{"show_work_days": ""}')
             dict_calculator["show_work_days"] = {"current_year": current_year, "current_month": current_month,
-                                                 "work_days": work_days}
+                                                 "work_days": amount_work_days}
             str_calculator = json.dumps(dict_calculator)
             self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
         else:
             dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
-            current_year = dict_calculator["show_calculater"]["current_year"]
             current_month = dict_calculator["show_calculater"]["current_month"]
-            last_day = calendar.monthrange(current_year, current_month)[1]
-            days = (datetime(current_year, current_month, x) for x in range(1, last_day + 1))
-            days = map(lambda day: self.my_calendar.is_working_day(day), days)
-            work_days = sum(days)
+            amount_work_days = self.my_calendar.amount_work_days_month(current_month)
             keyboard_calculater = await self.keyboard.get_month_calculater()
             button_done = {'done_month_calculator': 'Готово ✅'}
             text_in_message = 'Выберите месяц для расчета ЗП:'
             text = f"{self.format_text(text_in_message)}\n " \
                    f"Количество рабочих дней:\n" \
                    f"{self.format_text(calendar.month_name[current_month].lower())} - " \
-                   f"{self.format_text(str(work_days))}"
+                   f"{self.format_text(str(amount_work_days))}"
             if "show_work_days" in back_history:
+                await self.edit_caption(call_back.message, text, self.build_keyboard(keyboard_calculater, 3,
+                                                                                     button_done))
+            else:
+                answer = await self.bot.push_photo(call_back.message.chat.id, text,
+                                                   self.build_keyboard(keyboard_calculater, 3, button_done),
+                                                   self.bot.logo_income_menu)
+                self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
+                    call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
+                self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
+        await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        return True
+
+    async def show_done_work_days_calculator(self, call_back: CallbackQuery, back_history: str = None):
+        dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+        current_year = dict_calculator["show_work_days"]["current_year"]
+        current_month = dict_calculator["show_work_days"]["current_month"]
+        amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+        work_days = dict_calculator["show_work_days"]["work_days"]
+        if back_history is None:
+            keyboard_calculater = await self.keyboard.get_calculater()
+            button_done = {'done_salary_amount_calculator': 'Готово ✅'}
+            text_in_message = 'Введите размер Вашего оклада:'
+            text = f"{self.format_text(text_in_message)}\n " \
+                   f"Количество рабочих дней:\n" \
+                   f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+                   f"{self.format_text(str(amount_work_days))}\n" \
+                   f"Количество отработанных дней: {self.format_text(str(work_days))}\n" \
+                   f"Оклад: {self.format_text('{0:,}'.format(0).replace(',', ' '))} ₽"
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 3, button_done))
+            dict_calculator = json.loads('{"show_salary_amount": ""}')
+            dict_calculator["show_salary_amount"] = {"current_year": current_year, "current_month": current_month,
+                                                     "work_days": work_days, "salary_amount": 0}
+            str_calculator = json.dumps(dict_calculator)
+            self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        else:
+            dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+            current_month = dict_calculator["show_work_days"]["current_month"]
+            amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+            work_days = dict_calculator["show_work_days"]["work_days"]
+            keyboard_calculater = await self.keyboard.get_calculater()
+            button_done = {'done_work_days_calculator': 'Готово ✅'}
+            text_in_message = 'Выберите количество отработанных дней:'
+            text = f"{self.format_text(text_in_message)}\n " \
+                   f"Количество рабочих дней:\n" \
+                   f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+                   f"{self.format_text(str(amount_work_days))}\n" \
+                   f"Количество отработанных дней: {self.format_text(str(work_days))}"
+            if "show_salary_amount" in back_history:
                 await self.edit_caption(call_back.message, text, self.build_keyboard(keyboard_calculater, 3,
                                                                                      button_done))
             else:
@@ -2667,7 +2952,8 @@ class Function:
         return True
 
     @staticmethod
-    async def get_amount(text_message: str, button: str, separator_one: str, separator_two: str = None):
+    async def get_amount(text_message: str, button: str, separator_one: str, separator_two: str = None,
+                         check_amount: int = None) -> str:
         if separator_two is not None:
             amount_string = text_message.split(separator_one)[-1].split(separator_two)[0]
         else:
@@ -2676,10 +2962,13 @@ class Function:
             amount = button
         else:
             amount = f"{amount_string}{button}"
-        return str(amount)
+        if check_amount is not None:
+            if int(amount.replace(' ', '')) > check_amount:
+                amount = str(check_amount)
+        return amount.replace(' ', '')
 
     @staticmethod
-    async def get_amount_minus(text_message: str, separator_one: str, separator_two: str = None):
+    async def get_amount_minus(text_message: str, separator_one: str, separator_two: str = None) -> str:
         if separator_two is not None:
             amount_string = text_message.split(separator_one)[-1].split(separator_two)[0]
         else:
@@ -2687,29 +2976,33 @@ class Function:
         if amount_string == '1' or amount_string == '0':
             amount = '0'
         else:
-            amount = int(amount_string) - 1
-        return str(amount)
+            amount = int(amount_string.replace(' ', '')) - 1
+        return str(amount).replace(' ', '')
 
     @staticmethod
-    async def get_amount_plus(text_message: str, separator_one: str, separator_two: str = None):
+    async def get_amount_plus(text_message: str, separator_one: str, separator_two: str = None,
+                              check_amount: int = None) -> str:
         if separator_two is not None:
             amount_string = text_message.split(separator_one)[-1].split(separator_two)[0]
         else:
             amount_string = text_message.split(separator_one)[-1]
-        amount = int(amount_string) + 1
-        return str(amount)
+        amount = int(amount_string.replace(' ', '')) + 1
+        if check_amount is not None:
+            if amount > check_amount:
+                amount = check_amount
+        return str(amount).replace(' ', '')
 
     @staticmethod
-    async def get_amount_delete(text_message: str, separator_one: str, separator_two: str = None):
+    async def get_amount_delete(text_message: str, separator_one: str, separator_two: str = None) -> str:
         if separator_two is not None:
             amount_string = text_message.split(separator_one)[-1].split(separator_two)[0]
         else:
             amount_string = text_message.split(separator_one)[-1]
-        if len(amount_string) == 1:
+        if len(amount_string.replace(' ', '')) == 1:
             amount = '0'
         else:
-            amount = amount_string[:-1]
-        return str(amount)
+            amount = amount_string.replace(' ', '')[:-1]
+        return amount.replace(' ', '')
 
     @staticmethod
     async def answer_message(message: Message, text: str, keyboard: InlineKeyboardMarkup):
@@ -2720,19 +3013,31 @@ class Function:
 
     @staticmethod
     async def edit_message(message: Message, text: str, keyboard: InlineKeyboardMarkup):
-        return await message.edit_text(text=text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
+        try:
+            return await message.edit_text(text=text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
+        except TelegramBadRequest:
+            return await message.edit_text(text=text, parse_mode=None, reply_markup=keyboard)
 
     @staticmethod
     async def answer_text(message: Message, text: str):
-        return await message.answer(text=text, parse_mode=ParseMode.HTML, reply_to_message_id=message.message_id)
+        try:
+            return await message.answer(text=text, parse_mode=ParseMode.HTML, reply_to_message_id=message.message_id)
+        except TelegramBadRequest:
+            return await message.answer(text=text, parse_mode=None, reply_to_message_id=message.message_id)
 
     @staticmethod
     async def edit_text(message: Message, text: str):
-        return await message.edit_text(text=text, parse_mode=ParseMode.HTML)
+        try:
+            return await message.edit_text(text=text, parse_mode=ParseMode.HTML)
+        except TelegramBadRequest:
+            return await message.edit_text(text=text, parse_mode=None)
 
     @staticmethod
     async def edit_caption(message: Message, text: str, keyboard: InlineKeyboardMarkup):
-        return await message.edit_caption(caption=text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
+        try:
+            return await message.edit_caption(caption=text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
+        except TelegramBadRequest:
+            return await message.edit_caption(caption=text, parse_mode=None, reply_markup=keyboard)
 
     async def answer_photo(self, message: Message, photo: str, caption: str, keyboard: InlineKeyboardMarkup):
         try:

@@ -1,3 +1,5 @@
+import calendar
+from datetime import datetime
 from workalendar.europe import Russia
 from workalendar.registry_tools import iso_register
 
@@ -26,3 +28,10 @@ class Rus(Russia):
         # usual variable days
         days = super().get_variable_days(year)
         return days
+
+    def amount_work_days_month(self, current_month: int) -> int:
+        last_day = calendar.monthrange(2025, current_month)[1]
+        days = (datetime(2025, current_month, x) for x in range(1, last_day + 1))
+        days = map(lambda day: self.is_working_day(day), days)
+        work_days = sum(days)
+        return work_days

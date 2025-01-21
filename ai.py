@@ -111,13 +111,14 @@ class AI:
         await self.add_user_query(message.from_user.id, query)
         response_ai = await self.get_dict_answer_ai(message.from_user.id, token["access_token"])
         if response_ai is None:
-            answer = "Ничего не нашел по этому поводу, попробуйте спросить по-другому..."
+            arr_message = ["Ничего не нашел по этому поводу, попробуйте спросить по-другому..."]
         elif response_ai == 'New context':
-            answer = "Всё, я забыл, про что говорили..."
+            arr_message = ["Всё, я забыл, про что говорили..."]
         else:
             answer = response_ai['choices'][0]['message']['content']
+            arr_message = await self.division_message(answer)
             await self.add_assistant_query(message.from_user.id, answer)
-        return answer, self.dict_current_message
+        return arr_message, self.dict_current_message
 
     async def answer_ai_image(self, query: str, message: Message):
         self.done = set()
@@ -323,6 +324,17 @@ class AI:
         result = response.json()
         print(result)
         return result
+
+    @staticmethod
+    async def division_message(query: str) -> list:
+        arr = []
+        if len(query) > 4096:
+            parts = len(query) // 4096
+            for part in range(parts + 1):
+                arr.append(query[4096*part:4096 + 4096*part])
+        else:
+            arr = [query]
+        return arr
 
     async def get_dict_photo_ai_with_user_image(self, user_id: int, text: str, id_image_user, access_token: str):
         url = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
