@@ -35,3 +35,56 @@ class Rus(Russia):
         days = map(lambda day: self.is_working_day(day), days)
         work_days = sum(days)
         return work_days
+
+    def prepayment(self, salary_amount: int, current_month: int, work_days: int) -> int:
+        last_day = calendar.monthrange(2025, current_month)[1]
+        days = (datetime(2025, current_month, x) for x in range(1, last_day + 1))
+        days = map(lambda day: self.is_working_day(day), days)
+        all_work_days = sum(days)
+        money_one_day = salary_amount / all_work_days
+        prepayment_days = (datetime(2025, current_month, x) for x in range(1, 16))
+        prepayment_days = map(lambda day: self.is_working_day(day), prepayment_days)
+        prepayment_work_days = sum(prepayment_days)
+        if work_days <= prepayment_work_days:
+            total = 0
+        else:
+            total = money_one_day * prepayment_work_days
+        return round(total)
+
+    def salary(self, salary_amount: int, current_month: int, work_days: int) -> int:
+        last_day = calendar.monthrange(2025, current_month)[1]
+        days = (datetime(2025, current_month, x) for x in range(1, last_day + 1))
+        days = map(lambda day: self.is_working_day(day), days)
+        all_work_days = sum(days)
+        money_one_day = salary_amount / all_work_days
+        prepayment_days = (datetime(2025, current_month, x) for x in range(1, 16))
+        prepayment_days = map(lambda day: self.is_working_day(day), prepayment_days)
+        prepayment_work_days = sum(prepayment_days)
+        salary_days = (datetime(2025, current_month, x) for x in range(16, last_day + 1))
+        salary_days = map(lambda day: self.is_working_day(day), salary_days)
+        salary_work_days = sum(salary_days)
+        if work_days <= prepayment_work_days:
+            total = money_one_day * work_days
+        else:
+            if work_days < all_work_days:
+                total = money_one_day * (work_days - prepayment_work_days)
+            else:
+                total = money_one_day * salary_work_days
+        return round(total)
+
+    @staticmethod
+    def award(money_turnover: int, gross_profit: int) -> int:
+        if gross_profit == 0:
+            total = 0
+        else:
+            profitability = gross_profit / money_turnover
+            if money_turnover <= 1000000:
+                total = 0
+            elif 1000000 < money_turnover <= 5000000:
+                total = gross_profit * 0.05
+            elif 5000000 < money_turnover <= 10000000:
+                total = 5000000 * profitability * 0.05 + (money_turnover - 5000000) * profitability * 0.04
+            else:
+                total = 5000000 * profitability * 0.05 + 5000000 * profitability * 0.04 + (
+                            money_turnover - 10000000) * profitability * 0.03
+        return round(total)

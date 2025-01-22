@@ -99,6 +99,10 @@ class Function:
                 await self.show_done_salary_amount_calculator(call_back, previous_history)
             elif "show_money_turnover" in self.dict_user[call_back.from_user.id]['history'][-1]:
                 await self.show_done_money_turnover_calculator(call_back, previous_history)
+            elif "show_gross_profit" in self.dict_user[call_back.from_user.id]['history'][-1]:
+                await self.show_done_total_calculator(call_back, previous_history)
+            elif "show_total" in self.dict_user[call_back.from_user.id]['history'][-1]:
+                await self.show_return_total_calculator(call_back)
             else:
                 await self.return_start(call_back)
             return True
@@ -2609,6 +2613,102 @@ class Function:
                 self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
                     call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
                 self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
+        await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        return True
+
+    async def show_done_total_calculator(self, call_back: CallbackQuery, back_history: str = None):
+        dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+        current_year = dict_calculator["show_gross_profit"]["current_year"]
+        current_month = dict_calculator["show_gross_profit"]["current_month"]
+        amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+        work_days = dict_calculator["show_gross_profit"]["work_days"]
+        salary_amount = dict_calculator["show_gross_profit"]["salary_amount"]
+        money_turnover = dict_calculator["show_gross_profit"]["money_turnover"]
+        gross_profit = dict_calculator["show_gross_profit"]["gross_profit"]
+        prepayment = self.my_calendar.prepayment(salary_amount, current_month, work_days)
+        salary = self.my_calendar.salary(salary_amount, current_month, work_days)
+        award = self.my_calendar.award(money_turnover=money_turnover, gross_profit=gross_profit)
+        total = prepayment + salary + award
+        if back_history is None:
+            keyboard_calculater = {'back': 'Назад 🔙'}
+            text_in_message = 'Расчет заработной платы:\n'
+            text = f"{self.format_text(text_in_message)}\n" \
+                   f"Расчетный месяц: {self.format_text(calendar.month_name[current_month].lower())}\n" \
+                   f"Рабочих дней: {self.format_text(str(amount_work_days))}\n" \
+                   f"Отработанных дней: {self.format_text(str(work_days))}\n" \
+                   f"Аванс (С 1 по 15): {self.format_text('{0:,}'.format(prepayment).replace(',', ' '))} ₽\n" \
+                   f"Заработная плата: {self.format_text('{0:,}'.format(salary).replace(',', ' '))} ₽\n" \
+                   f"Премия: {self.format_text('{0:,}'.format(award).replace(',', ' '))} ₽\n" \
+                   f"ИТОГО: {self.format_text('{0:,}'.format(total).replace(',', ' '))} ₽"
+            await self.bot.edit_head_caption(text, call_back.message.chat.id,
+                                             self.dict_user[call_back.from_user.id]['messages'][-1],
+                                             self.build_keyboard(keyboard_calculater, 1))
+            dict_calculator = json.loads('{"show_total": ""}')
+            dict_calculator["show_total"] = {"current_year": current_year, "current_month": current_month,
+                                             "work_days": work_days, "salary_amount": salary_amount,
+                                             "money_turnover": money_turnover, "gross_profit": gross_profit}
+            str_calculator = json.dumps(dict_calculator)
+            self.dict_user[call_back.from_user.id]['history'].append(str_calculator)
+        else:
+            dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+            current_month = dict_calculator["show_gross_profit"]["current_month"]
+            amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+            work_days = dict_calculator["show_gross_profit"]["work_days"]
+            salary_amount = dict_calculator["show_gross_profit"]["salary_amount"]
+            money_turnover = dict_calculator["show_gross_profit"]["money_turnover"]
+            gross_profit = dict_calculator["show_gross_profit"]["gross_profit"]
+            keyboard_calculater = await self.keyboard.get_calculater()
+            button_done = {'done_total_calculator': 'Посчитать 🧮'}
+            text_in_message = 'Введите сумму валовой прибыли за месяц:'
+            text = f"{self.format_text(text_in_message)}\n " \
+                   f"Количество рабочих дней:\n" \
+                   f"{self.format_text(calendar.month_name[current_month].lower())} - " \
+                   f"{self.format_text(str(amount_work_days))}\n" \
+                   f"Количество отработанных дней: {self.format_text(str(work_days))}\n" \
+                   f"Оклад: {self.format_text('{0:,}'.format(salary_amount).replace(',', ' '))} ₽\n" \
+                   f"Сумма продаж: {self.format_text('{0:,}'.format(money_turnover).replace(',', ' '))} ₽\n" \
+                   f"Валовая прибыль: {self.format_text('{0:,}'.format(gross_profit).replace(',', ' '))} ₽"
+            if "show_total" in back_history:
+                await self.edit_caption(call_back.message, text, self.build_keyboard(keyboard_calculater, 3,
+                                                                                     button_done))
+            else:
+                answer = await self.bot.push_photo(call_back.message.chat.id, text,
+                                                   self.build_keyboard(keyboard_calculater, 3, button_done),
+                                                   self.bot.logo_income_menu)
+                self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
+                    call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
+                self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
+        await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
+        return True
+
+    async def show_return_total_calculator(self, call_back: CallbackQuery):
+        dict_calculator = json.loads(self.dict_user[call_back.from_user.id]['history'][-1])
+        current_month = dict_calculator["show_total"]["current_month"]
+        amount_work_days = self.my_calendar.amount_work_days_month(current_month)
+        work_days = dict_calculator["show_total"]["work_days"]
+        salary_amount = dict_calculator["show_total"]["salary_amount"]
+        money_turnover = dict_calculator["show_total"]["money_turnover"]
+        gross_profit = dict_calculator["show_total"]["gross_profit"]
+        prepayment = self.my_calendar.prepayment(salary_amount, current_month, work_days)
+        salary = self.my_calendar.salary(salary_amount, current_month, work_days)
+        award = self.my_calendar.award(money_turnover=money_turnover, gross_profit=gross_profit)
+        total = prepayment + salary + award
+        keyboard_calculater = {'back': 'Назад 🔙'}
+        text_in_message = 'Расчет заработной платы:\n'
+        text = f"{self.format_text(text_in_message)}\n" \
+               f"Расчетный месяц: {self.format_text(calendar.month_name[current_month].lower())}\n" \
+               f"Рабочих дней: {self.format_text(str(amount_work_days))}\n" \
+               f"Отработанных дней: {self.format_text(str(work_days))}\n" \
+               f"Аванс (С 1 по 15): {self.format_text('{0:,}'.format(prepayment).replace(',', ' '))} ₽\n" \
+               f"Заработная плата: {self.format_text('{0:,}'.format(salary).replace(',', ' '))} ₽\n" \
+               f"Премия: {self.format_text('{0:,}'.format(award).replace(',', ' '))} ₽\n" \
+               f"ИТОГО: {self.format_text('{0:,}'.format(total).replace(',', ' '))} ₽"
+        answer = await self.bot.push_photo(call_back.message.chat.id, text,
+                                           self.build_keyboard(keyboard_calculater, 1),
+                                           self.bot.logo_income_menu)
+        self.dict_user[call_back.from_user.id]['messages'] = await self.delete_messages(
+            call_back.from_user.id, self.dict_user[call_back.from_user.id]['messages'])
+        self.dict_user[call_back.from_user.id]['messages'].append(str(answer.message_id))
         await self.execute.update_user(call_back.from_user.id, self.dict_user[call_back.from_user.id])
         return True
 
