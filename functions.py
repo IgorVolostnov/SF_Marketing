@@ -11,7 +11,6 @@ from calendar_rus import Rus
 from dateutil.relativedelta import relativedelta
 from keyboard import KeyBoardBot
 from database_requests import Execute
-from edit_pdf import GetTextOCR
 from ai import AI
 from diagram import UserCosts
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
@@ -33,7 +32,6 @@ class Function:
         self.page_outlay = self.keyboard.get_pages_outlay
         self.page_income = self.keyboard.get_pages_income
         self.execute = Execute()
-        self.info_pdf = GetTextOCR()
         self.ai = AI(self)
         self.diagram = UserCosts()
         self.my_calendar = Rus()

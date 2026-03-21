@@ -195,7 +195,8 @@ class AI:
         headers = {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Accept': 'application/json',
-            'Authorization': f'Bearer {token["access_token"]}'
+            'Authorization': f'Bearer {token["access_token"]}',
+            'X-Session-ID': 'session-id-1',
         }
         response = requests.request("GET", url, headers=headers, data=payload, verify='chain.pem')
         return response.json()
@@ -212,7 +213,8 @@ class AI:
             headers = {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'Authorization': f'Bearer {access_token}'
+                'Authorization': f'Bearer {access_token}',
+                'X-Session-ID': f'{str(user_id)}',
             }
             async with aiohttp.ClientSession() as session:
                 tasks = []
@@ -255,7 +257,8 @@ class AI:
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Authorization': f'Bearer {access_token}'
+            'Authorization': f'Bearer {access_token}',
+            'X-Session-ID': f'{str(user_id)}',
         }
         async with aiohttp.ClientSession() as session:
             tasks = []
@@ -303,8 +306,9 @@ class AI:
             ]
             headers = {'Authorization': f'Bearer {token["access_token"]}'}
             response = requests.request("POST", url, headers=headers, data=payload, files=files, verify='chain.pem')
-            result = json.loads(response.text)
-            self.dict_history_src[user_id] = [result["id"]]
+            if not response.ok:
+                result = json.loads(response.text)
+                self.dict_history_src[user_id] = [result["id"]]
 
     @staticmethod
     async def get_img(fileid: str, access_token: str):
@@ -359,7 +363,8 @@ class AI:
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Authorization': f'Bearer {access_token}'
+            'Authorization': f'Bearer {access_token}',
+            'X-Session-ID': f'{str(user_id)}',
         }
         async with aiohttp.ClientSession() as session:
             tasks = []

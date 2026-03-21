@@ -558,7 +558,7 @@ class DispatcherMessage(Dispatcher):
             await self.execute.set_default_category(int(os.environ["ADMIN_ID"]))
         self.dict_user[int(os.environ["ADMIN_ID"])]['messages'] = await self.functions.delete_messages(
             int(os.environ["ADMIN_ID"]), self.dict_user[int(os.environ["ADMIN_ID"])]['messages'])
-        answer = await self.bot.send_message(chat_id=os.environ["ADMIN_ID"], text='Бот FinAppBot запущен!')
+        answer = await self.bot.send_message(chat_id=os.environ["ADMIN_ID"], text='Бот Angela запущен!')
         self.dict_user[int(os.environ["ADMIN_ID"])]['messages'].append(str(answer.message_id))
         self.dict_user[int(os.environ["ADMIN_ID"])]['history'] = ['start']
         await self.execute.update_user(int(os.environ["ADMIN_ID"]), self.dict_user[int(os.environ["ADMIN_ID"])])
@@ -579,7 +579,7 @@ class DispatcherMessage(Dispatcher):
         # Отправляем сообщение администратору о том, что бот был остановлен
         self.dict_user[int(os.environ["ADMIN_ID"])]['messages'] = await self.functions.delete_messages(
             int(os.environ["ADMIN_ID"]), self.dict_user[int(os.environ["ADMIN_ID"])]['messages'])
-        answer = await self.bot.send_message(chat_id=os.environ["ADMIN_ID"], text='Бот FinAppBot остановлен!')
+        answer = await self.bot.send_message(chat_id=os.environ["ADMIN_ID"], text='Бот Angela остановлен!')
         self.dict_user[int(os.environ["ADMIN_ID"])]['messages'].append(str(answer.message_id))
         self.dict_user[int(os.environ["ADMIN_ID"])]['history'] = ['start']
         await self.execute.update_user(int(os.environ["ADMIN_ID"]), self.dict_user[int(os.environ["ADMIN_ID"])])

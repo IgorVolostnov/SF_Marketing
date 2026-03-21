@@ -6,4 +6,4 @@ if __name__ == '__main__':
         bot = BotTelegram(os.environ["BOT_TOKEN"])
         bot.run()
     except KeyboardInterrupt:
-        print('FinAppBot остановлен вручную')
+        print('Angela остановлена вручную')
