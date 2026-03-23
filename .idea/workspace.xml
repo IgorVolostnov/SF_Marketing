@@ -4,16 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a3a2aafe-6649-4c1c-9280-caeaad535ee9" name="Changes" comment="Commit 202502071744 add error AI">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/SFMarketing.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/SFMarketing.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="a3a2aafe-6649-4c1c-9280-caeaad535ee9" name="Changes" comment="Commit 202603211126 change python 3.12">
+      <change afterPath="$PROJECT_DIR$/data/Avatar FinAppBot.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/Logo FinAppBot.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/Logo_goal_menu.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/Logo_income_menu.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/Logo_main_menu.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/Logo_outlay_menu.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ai.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dispatcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/dispatcher.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/calendar_rus.py" beforeDir="false" afterPath="$PROJECT_DIR$/calendar_rus.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -54,26 +54,27 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.database_requests.executor&quot;: &quot;Run&quot;,
-    &quot;Python.edit_pdf.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/igoriusha/PycharmProjects/OdataRossvikMoscow&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.database_requests.executor": "Run",
+    "Python.edit_pdf.executor": "Run",
+    "Python.main.executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "/home/igoriusha/PycharmProjects/SF_Marketing",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="Python.main">
     <configuration name="database_requests" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="SFMarketing" />
@@ -223,6 +224,9 @@
       <workItem from="1765916832679" duration="1364000" />
       <workItem from="1773055842383" duration="27000" />
       <workItem from="1773055902345" duration="21000" />
+      <workItem from="1774081285609" duration="389000" />
+      <workItem from="1774131900355" duration="469000" />
+      <workItem from="1774294296136" duration="1100000" />
     </task>
     <task id="LOCAL-00001" summary="Commit 202410050131">
       <option name="closed" value="true" />
@@ -451,7 +455,15 @@
       <option name="project" value="LOCAL" />
       <updated>1738939536604</updated>
     </task>
-    <option name="localTasksCounter" value="33" />
+    <task id="LOCAL-00033" summary="Commit 202603211126 change python 3.12">
+      <option name="closed" value="true" />
+      <created>1774081583548</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1774081583548</updated>
+    </task>
+    <option name="localTasksCounter" value="34" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -469,7 +481,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Commit 202410101502" />
     <MESSAGE value="Commit 202410111827" />
     <MESSAGE value="Commit 202410130256" />
     <MESSAGE value="Commit 202410131124" />
@@ -494,9 +505,10 @@
     <MESSAGE value="Commit 202501220036 add gross profit" />
     <MESSAGE value="Commit 202501222340 add salary calculator" />
     <MESSAGE value="Commit 202502071744 add error AI" />
-    <option name="LAST_COMMIT_MESSAGE" value="Commit 202502071744 add error AI" />
+    <MESSAGE value="Commit 202603211126 change python 3.12" />
+    <option name="LAST_COMMIT_MESSAGE" value="Commit 202603211126 change python 3.12" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/SF_Marketing$main.coverage" NAME="main Coverage Results" MODIFIED="1765559589083" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/SF_Marketing$main.coverage" NAME="main Coverage Results" MODIFIED="1774081449886" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

@@ -14,12 +14,13 @@ class Rus(Russia):
         (1, 5, "Fifth Day after New Year"),
         (1, 6, "Sixth Day after New Year"),
         (1, 7, "Christmas"),
+        (1, 8, "Day After Christmas"),
+        (1, 9, "Second Day AfterChristmas"),
+        (2, 23, "The Day of Men"),
+        (3, 9, "The Day of Women"),
         (5, 1, "The Day of Spring and Labour"),
-        (5, 2, "The Day of Spring and Labour shift"),
-        (5, 8, "Before Victory Day"),
-        (5, 9, "Victory Day"),
+        (5, 11, "After Victory Day"),
         (6, 12, "National Day"),
-        (6, 13, "National Day shift"),
         (11, 4, "Day of Unity"),
         (12, 31, "Before New year"),
     )
@@ -30,19 +31,19 @@ class Rus(Russia):
         return days
 
     def amount_work_days_month(self, current_month: int) -> int:
-        last_day = calendar.monthrange(2025, current_month)[1]
-        days = (datetime(2025, current_month, x) for x in range(1, last_day + 1))
+        last_day = calendar.monthrange(2026, current_month)[1]
+        days = (datetime(2026, current_month, x) for x in range(1, last_day + 1))
         days = map(lambda day: self.is_working_day(day), days)
         work_days = sum(days)
         return work_days
 
     def prepayment(self, salary_amount: int, current_month: int, work_days: int) -> int:
-        last_day = calendar.monthrange(2025, current_month)[1]
-        days = (datetime(2025, current_month, x) for x in range(1, last_day + 1))
+        last_day = calendar.monthrange(2026, current_month)[1]
+        days = (datetime(2026, current_month, x) for x in range(1, last_day + 1))
         days = map(lambda day: self.is_working_day(day), days)
         all_work_days = sum(days)
         money_one_day = salary_amount / all_work_days
-        prepayment_days = (datetime(2025, current_month, x) for x in range(1, 16))
+        prepayment_days = (datetime(2026, current_month, x) for x in range(1, 16))
         prepayment_days = map(lambda day: self.is_working_day(day), prepayment_days)
         prepayment_work_days = sum(prepayment_days)
         if work_days <= prepayment_work_days:
@@ -52,15 +53,15 @@ class Rus(Russia):
         return round(total)
 
     def salary(self, salary_amount: int, current_month: int, work_days: int) -> int:
-        last_day = calendar.monthrange(2025, current_month)[1]
-        days = (datetime(2025, current_month, x) for x in range(1, last_day + 1))
+        last_day = calendar.monthrange(2026, current_month)[1]
+        days = (datetime(2026, current_month, x) for x in range(1, last_day + 1))
         days = map(lambda day: self.is_working_day(day), days)
         all_work_days = sum(days)
         money_one_day = salary_amount / all_work_days
-        prepayment_days = (datetime(2025, current_month, x) for x in range(1, 16))
+        prepayment_days = (datetime(2026, current_month, x) for x in range(1, 16))
         prepayment_days = map(lambda day: self.is_working_day(day), prepayment_days)
         prepayment_work_days = sum(prepayment_days)
-        salary_days = (datetime(2025, current_month, x) for x in range(16, last_day + 1))
+        salary_days = (datetime(2026, current_month, x) for x in range(16, last_day + 1))
         salary_days = map(lambda day: self.is_working_day(day), salary_days)
         salary_work_days = sum(salary_days)
         if work_days <= prepayment_work_days:
